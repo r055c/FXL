@@ -160,28 +160,17 @@ function ResultCard({ match, teamName = "FC", compColor = "#FFD700" }) {
             </div>
           </>
         )}
-        {(match.motm || match.oppMotm) && (
+        {match.motm && (
           <>
             <div style={{ height: 1, background: "#eee", margin: "0 20px" }} />
             <div style={{ padding: "12px 20px 14px", display: "flex", gap: 24, flexWrap: "wrap" }}>
-              {match.motm && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>⭐</span>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: compColor, letterSpacing: 2, textTransform: "uppercase", display: "block", marginBottom: 2 }}>Man of the Match</span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: "#005c1f" }}>{match.motm}</span>
-                  </div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>⭐</span>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: compColor, letterSpacing: 2, textTransform: "uppercase", display: "block", marginBottom: 2 }}>Man of the Match</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#005c1f" }}>{match.motm}</span>
                 </div>
-              )}
-              {match.oppMotm && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>🏅</span>
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#aaa", letterSpacing: 2, textTransform: "uppercase", display: "block", marginBottom: 2 }}>Opp. Man of Match</span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: "#555" }}>{match.oppMotm}</span>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </>
         )}
@@ -275,7 +264,7 @@ export default function App() {
   const [editingFixture, setEditingFixture] = useState(null);
   const [fixtureForm, setFixtureForm] = useState({ date: "", opposition: "", competition: DEFAULT_COMPETITIONS[0], venue: "", notes: "" });
 
-  const [form, setForm] = useState({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: DEFAULT_COMPETITIONS[0], motm: "", oppMotm: "" });
+  const [form, setForm] = useState({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: DEFAULT_COMPETITIONS[0], motm: "" });
   const fileRef = useRef();
   const editFileRef = useRef();
 
@@ -318,7 +307,7 @@ export default function App() {
     const scorerList = form.scorers ? form.scorers.split(",").map(s => s.trim()).filter(Boolean) : [];
     let displayDate = form.date;
     try { displayDate = new Date(form.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch(e) {}
-    const newMatch = { date: displayDate, opposition: form.opposition, homeScore: hs, awayScore: as_, scorers: scorerList, result, competition: form.competition, motm: form.motm.trim(), oppMotm: form.oppMotm.trim(), oppLogo: oppLogo || null };
+    const newMatch = { date: displayDate, opposition: form.opposition, homeScore: hs, awayScore: as_, scorers: scorerList, result, competition: form.competition, motm: form.motm.trim(), oppLogo: oppLogo || null };
     try { const saved = await insertResult(newMatch); setResults(prev => [...prev, saved || { ...newMatch, id: Date.now() }]); setNewResult(saved || { ...newMatch, id: Date.now() }); }
     catch(e) { const m = { ...newMatch, id: Date.now() }; setResults(prev => [...prev, m]); setNewResult(m); }
   };
@@ -706,15 +695,9 @@ export default function App() {
                     <label style={labelStyle}>Goal Scorers (comma separated)</label>
                     <input type="text" value={typeof editingResult.scorers === "string" ? editingResult.scorers : (editingResult.scorers || []).join(", ")} onChange={e => setEditingResult(r => ({ ...r, scorers: e.target.value }))} style={inputStyle} />
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                    <div>
-                      <label style={labelStyle}>⭐ Man of Match</label>
-                      <input type="text" value={editingResult.motm || ""} onChange={e => setEditingResult(r => ({ ...r, motm: e.target.value }))} style={inputStyle} />
-                    </div>
-                    <div>
-                      <label style={{ ...labelStyle, color: "#aaa" }}>🏅 Opp MOTM</label>
-                      <input type="text" value={editingResult.oppMotm || ""} onChange={e => setEditingResult(r => ({ ...r, oppMotm: e.target.value }))} style={inputStyle} />
-                    </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={labelStyle}>⭐ Man of Match</label>
+                    <input type="text" value={editingResult.motm || ""} onChange={e => setEditingResult(r => ({ ...r, motm: e.target.value }))} style={inputStyle} />
                   </div>
                   <div style={{ marginBottom: 20 }}>
                     <label style={labelStyle}>Opposition Logo</label>
@@ -737,7 +720,7 @@ export default function App() {
         {mode === "scorers" && (
           <div style={{ maxWidth: 520, margin: "0 auto" }}>
             <div style={{ display: "flex", background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.07)", marginBottom: 20 }}>
-              {[{ key: "goals", label: "⚽ Goals" }, { key: "motm", label: "⭐ MOTM" }, { key: "oppmotm", label: "🏅 Opp MOTM" }].map(st => (
+              {[{ key: "goals", label: "⚽ Goals" }, { key: "motm", label: "⭐ MOTM" }].map(st => (
                 <button key={st.key} onClick={() => setScorersTab(st.key)}
                   style={{ flex: 1, padding: "12px 6px", border: "none", background: scorersTab === st.key ? "#005c1f" : "none", color: scorersTab === st.key ? "#FFD700" : "#999", fontWeight: 800, fontSize: 12, letterSpacing: 1, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" }}>
                   {st.label}
@@ -758,7 +741,7 @@ export default function App() {
             </div>
             {scorersTab === "goals" && <Leaderboard data={buildGoalBoard(filteredResults)} label="Top Goal Scorers" emptyMsg="No goals recorded yet." filterLabel={filterComp === "All" ? "All Competitions" : filterComp} accentColor="#FFD700" />}
             {scorersTab === "motm" && <Leaderboard data={buildAwardBoard(filteredResults, "motm")} label="Man of the Match" emptyMsg="No MOTM awards yet." filterLabel={filterComp === "All" ? "All Competitions" : filterComp} accentColor="#ffd700" />}
-            {scorersTab === "oppmotm" && <Leaderboard data={buildAwardBoard(filteredResults, "oppMotm")} label="Opposition MOTM" emptyMsg="No Opp. MOTM awards yet." filterLabel={filterComp === "All" ? "All Competitions" : filterComp} accentColor="#ff7eb3" />}
+
             <p style={{ textAlign: "center", color: "#bbb", fontSize: 12, marginTop: 14, letterSpacing: 1 }}>SAMBA SNACKERS {teamName.toUpperCase()}</p>
           </div>
         )}
@@ -890,18 +873,12 @@ export default function App() {
 
                 <div style={{ marginBottom: 16 }}>
                   <label style={labelStyle}>Goal Scorers (comma separated)</label>
-                  <input type="text" placeholder="e.g. Grayson, Kayson ×2, Reggie" value={form.scorers} onChange={e => setForm(f => ({ ...f, scorers: e.target.value }))} style={inputStyle} />
+                  <input type="text" placeholder="" value={form.scorers} onChange={e => setForm(f => ({ ...f, scorers: e.target.value }))} style={inputStyle} />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <label style={labelStyle}>⭐ Man of Match</label>
-                    <input type="text" placeholder="e.g. Grayson" value={form.motm} onChange={e => setForm(f => ({ ...f, motm: e.target.value }))} style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, color: "#aaa" }}>🏅 Opp MOTM</label>
-                    <input type="text" placeholder="e.g. Smith" value={form.oppMotm} onChange={e => setForm(f => ({ ...f, oppMotm: e.target.value }))} style={inputStyle} />
-                  </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>⭐ Man of Match</label>
+                  <input type="text" placeholder="" value={form.motm} onChange={e => setForm(f => ({ ...f, motm: e.target.value }))} style={inputStyle} />
                 </div>
 
                 <div style={{ marginBottom: 20 }}>
@@ -922,7 +899,7 @@ export default function App() {
             ) : (
               <div>
                 <ResultCard match={newResult} teamName={teamName} compColor={getCompColor(competitions, newResult.competition)} />
-                <button onClick={() => { setNewResult(null); setOppLogo(null); setForm({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: form.competition, motm: "", oppMotm: "" }); }}
+                <button onClick={() => { setNewResult(null); setOppLogo(null); setForm({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: form.competition, motm: "" }); }}
                   style={{ marginTop: 16, width: "100%", padding: "14px", background: "#fff", color: "#005c1f", border: "2px solid #e8e8e8", borderRadius: 12, fontSize: 15, fontWeight: 800, letterSpacing: 2, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" }}>
                   ← Add Another Result
                 </button>
