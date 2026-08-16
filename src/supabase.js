@@ -1,6 +1,6 @@
 // src/supabase.js
-export const SUPABASE_URL = "YOUR_SUPABASE_URL";
-export const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+export const SUPABASE_URL = "https://fboroiqklryquxbwuyip.supabase.co/";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZib3JvaXFrbHJ5cXV4Ynd1eWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjM0MzAsImV4cCI6MjA5NzY5OTQzMH0.UMChfFZn3HMbeUdQQK20Dv1RgmmIcm6QK5yxbuhF5ow";
 
 const headers = {
   "Content-Type": "application/json",
