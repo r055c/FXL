@@ -1740,35 +1740,20 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Opp MOTM — only show when squad selected */}
-                    
                   </>
                 ) : (
                   <>
                     {/* Fallback text fields if no squad set up yet */}
                     <div style={{ marginBottom: 16 }}>
                       <label style={labelStyle}>Goal Scorers (comma separated)</label>
-                      <input type="text" placeholder="e.g. Grayson, Kayson ×2, Reggie" value={form.scorers} onChange={e => setForm(f => ({ ...f, scorers: e.target.value }))} style={inputStyle} />
+                      <input type="text" placeholder="" value={form.scorers} onChange={e => setForm(f => ({ ...f, scorers: e.target.value }))} style={inputStyle} />
                     </div>
                     <div style={{ marginBottom: 16 }}>
-                  <label style={labelStyle}>⭐ Man of Match</label>
-                  <input type="text" placeholder="" value={form.motm} onChange={e => setForm(f => ({ ...f, motm: e.target.value }))} style={inputStyle} />
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Player Name</label>
-                    <input type="text" placeholder="e.g. Grayson" value={playerForm.name} onChange={e => setPlayerForm(f => ({ ...f, name: e.target.value }))}
-                      style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
-                  </div>
-
-                  <button onClick={handleSavePlayer} disabled={!playerForm.name.trim()}
-                    style={{ width: "100%", padding: "15px", background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 900, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", opacity: !playerForm.name.trim() ? 0.5 : 1 }}>
-                    {editingPlayer ? "Save Changes" : "Add to Squad"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                      <label style={labelStyle}>⭐ Man of Match</label>
+                      <input type="text" placeholder="" value={form.motm} onChange={e => setForm(f => ({ ...f, motm: e.target.value }))} style={inputStyle} />
+                    </div>
+                  </>
+                )}
 
         {/* ── SEASON REPORT TAB ── */}
         {mode === "report" && isAdmin && (() => {
