@@ -1,4 +1,4 @@
-// Samba Snackers FC — v2.3
+// Samba Snackers FC — v3.0
 import { useState, useRef, useEffect, useCallback } from "react";
 import { fetchResults, insertResult, updateResult, deleteResult, fetchTeams, insertTeam, updateTeam, deleteTeam, fetchFixtures, insertFixture, updateFixture, deleteFixture, fetchSeasons, insertSeason, updateSeason, setActiveSeason, fetchPlayers, insertPlayer, updatePlayer, deletePlayer, fetchAppearances, insertAppearances, deleteAppearancesByResult } from "./supabase.js";
 
@@ -116,7 +116,7 @@ function PlayerProfileScreen({ name, players, appearances, results, seasons, age
         </div>
         <div style={{ fontFamily: THEME.display, fontWeight: 600, fontSize: 20, color: THEME.navy }}>{name}</div>
         <div style={{ fontFamily: THEME.mono, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", color: THEME.ink60, marginTop: 2 }}>
-          {ageGroup}{stats.player?.squad_number ? ` · Squad No. ${stats.player.squad_number}` : ""}
+          {ageGroup}
         </div>
       </div>
 
@@ -342,7 +342,6 @@ function ScoreCard({ match, compColor = "#FFD700", onClick, showMeta = true }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           {match.motm && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: "#e8a93b" }}>⭐ {match.motm}</span>}
           {(match.scorers || []).length > 0 && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: "#e8a93b" }}>⚽ {match.scorers.join(", ")}</span>}
-          {match.round && <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: 1, textTransform: "uppercase", color: "#8b91ad" }}>{match.round}</span>}
           <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: "#6b7191", marginLeft: "auto" }}>{match.date}</span>
         </div>
       )}
@@ -365,8 +364,7 @@ function ResultCard({ match, teamName = "Team", compColor = "#FFD700", players =
         <div style={{ background: "#005c1f", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", rowGap: 6, columnGap: 12 }}>
           <div style={{ minWidth: 0 }}>
             <span style={{ color: compColor, fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{match.competition}</span>
-            {match.round && <span style={{ color: "#aaa", fontSize: 11, marginLeft: 8, fontWeight: 600 }}>· {match.round}</span>}
-          </div>
+            </div>
           <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{match.date}</span>
           <span style={{ background: resultColor, color: "#fff", fontWeight: 800, fontSize: 12, letterSpacing: 2, padding: "3px 10px", borderRadius: 20, flexShrink: 0 }}>{resultLabel}</span>
         </div>
@@ -376,7 +374,7 @@ function ResultCard({ match, teamName = "Team", compColor = "#FFD700", players =
               <SambaLogo size={44} />
             </div>
             <span style={{ fontSize: "clamp(10px,3vw,13px)", fontWeight: 700, color: "#005c1f", textAlign: "center", lineHeight: 1.2 }}>
-              SUNDERLAND LEON<br /><span style={{ color: compColor, fontSize: "clamp(9px,2.5vw,11px)" }}>{teamName.toUpperCase()}</span>
+              SAMBA SNACKERS<br /><span style={{ color: compColor, fontSize: "clamp(9px,2.5vw,11px)" }}>{teamName.toUpperCase()}</span>
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto", gap: 4 }}>
@@ -412,7 +410,7 @@ function ResultCard({ match, teamName = "Team", compColor = "#FFD700", players =
                       ) : (
                         <span style={{ fontSize: 16 }}>⚽</span>
                       )}
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#005c1f" }}>{player?.squad_number ? `#${player.squad_number} ` : ""}{scorer}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#005c1f" }}>{scorer}</span>
                     </div>
                   );
                 })}
@@ -444,7 +442,24 @@ function ResultCard({ match, teamName = "Team", compColor = "#FFD700", players =
                   </div>
                 );
               })()}
-</div>
+              >
+                    {player?.photo ? (
+                      <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "2px solid #ff7eb3" }}>
+                        <img src={player.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={match.oppMotm} />
+                      </div>
+                    ) : (
+                      <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "2px solid #ff7eb3" }}>
+                        <span style={{ color: "#ff7eb3", fontSize: 13, fontWeight: 900 }}>{match.oppMotm.slice(0,2).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#aaa", letterSpacing: 2, textTransform: "uppercase", display: "block", marginBottom: 2 }}>Opp. Man of Match</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "#555" }}>{match.oppMotm}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </>
         )}
         <div style={{ background: "#005c1f", padding: "8px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -507,7 +522,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [viewingPlayerName, setViewingPlayerName] = useState(null);
   const [playerProfileFrom, setPlayerProfileFrom] = useState("scorers");
-  const [homeH2HExpanded, setHomeH2HExpanded] = useState(false);
+
   const [showPinGate, setShowPinGate] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
@@ -535,7 +550,6 @@ export default function App() {
   const [editingComp, setEditingComp] = useState(null);
   const [tempCompName, setTempCompName] = useState("");
   const [filterComp, setFilterComp] = useState("All");
-  
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [editingResult, setEditingResult] = useState(null);
@@ -554,18 +568,17 @@ export default function App() {
 
   // Player / squad state
   const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [showFormerPlayers, setShowFormerPlayers] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
-  const [playerForm, setPlayerForm] = useState({ name: "", squad_number: "", photo: null });
+  const [playerForm, setPlayerForm] = useState({ name: "" });
   const [selectedSquad, setSelectedSquad] = useState([]);
   const [goalCounts, setGoalCounts] = useState({});
   const [motmPlayerId, setMotmPlayerId] = useState(null);
   
-  const playerPhotoRef = useRef();
-
   const [form, setForm] = useState({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: "", motm: "", season_id: null });
   const [showFixtureForm, setShowFixtureForm] = useState(false);
   const [editingFixture, setEditingFixture] = useState(null);
-  const [fixtureForm, setFixtureForm] = useState({ date: "", opposition: "", competition: "", venue: "", notes: "" });
+  const [fixtureForm, setFixtureForm] = useState({ date: "", opposition: "", competition: "", venue: "", notes: "", season_id: null });
   const fileRef = useRef();
   const editFileRef = useRef();
   const reportRef = useRef();
@@ -589,7 +602,7 @@ export default function App() {
           setViewingSeason(active);
           const comps = active.competitions || DEFAULT_COMPETITIONS;
           setCompetitions(comps);
-          setForm(f => ({ ...f, competition: comps[0] || "" }));
+          setForm(f => ({ ...f, competition: comps[0] || "", season_id: active.id }));
         } else {
           // No seasons yet — create the first one
           const created = await insertSeason({ name: "Season 1", age_group: "Samba Snackers FC", is_active: true, competitions: DEFAULT_COMPETITIONS });
@@ -609,7 +622,6 @@ export default function App() {
   // Build competitions from stored list + any competitions already used in results for this season
   const resultComps = seasonResults.map(r => r.competition).filter(Boolean);
   const competitionsInUse = [...new Set([...competitions, ...resultComps])];
-  
 
   const filteredResults = (filterComp === "All" ? seasonResults : seasonResults.filter(r => r.competition === filterComp))
     .slice().sort((a, b) => {
@@ -648,9 +660,7 @@ export default function App() {
     .filter(f => { const d = new Date(f.rawDate || f.date); d.setHours(0,0,0,0); return d < today || findFixtureResult(f); })
     .sort((a, b) => new Date(b.rawDate || b.date) - new Date(a.rawDate || a.date));
   const nextFixture = upcomingFixtures[0] || null;
-  const nextFixtureH2H = nextFixture
-    ? results.filter(r => r.opposition.toLowerCase() === nextFixture.opposition.toLowerCase()).sort((a, b) => new Date(b.date) - new Date(a.date))
-    : [];
+
 
   // ── Handlers ───────────────────────────────────────────
   const handleCreate = async () => {
@@ -665,8 +675,7 @@ export default function App() {
       }).filter(Boolean);
     // MOTM from player selection or manual
     const motmName = motmPlayerId ? (players.find(p => p.id === motmPlayerId)?.name || "") : form.motm.trim();
-    
-    let displayDate = form.date;
+        let displayDate = form.date;
     try { displayDate = new Date(form.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch(e) {}
     const newMatch = { date: displayDate, opposition: form.opposition, homeScore: hs, awayScore: as_, scorers: scorerList, result, competition: form.competition, motm: motmName, oppLogo: oppLogo || null, season_id: form.season_id || activeSeason?.id };
     try {
@@ -725,25 +734,32 @@ export default function App() {
   };
 
   const handleSavePlayer = async () => {
-    const data = { name: playerForm.name.trim(), squad_number: parseInt(playerForm.squad_number) || null, photo: playerForm.photo || null, is_active: true };
+    const data = { name: playerForm.name.trim(), is_active: true };
     if (!data.name) return;
     if (editingPlayer) {
       const updated = { ...editingPlayer, ...data };
       try { await updatePlayer(updated); } catch(e) {}
       setPlayers(prev => prev.map(p => p.id === updated.id ? updated : p));
     } else {
-      try { const saved = await insertPlayer(data); setPlayers(prev => [...prev, saved || { ...data, id: Date.now() }].sort((a,b) => (a.squad_number||99)-(b.squad_number||99))); }
+      try { const saved = await insertPlayer(data); setPlayers(prev => [...prev, saved || { ...data, id: Date.now() }].sort((a,b) => a.name.localeCompare(b.name))); }
       catch(e) { setPlayers(prev => [...prev, { ...data, id: Date.now() }]); }
     }
     setShowPlayerModal(false);
     setEditingPlayer(null);
-    setPlayerForm({ name: "", squad_number: "", photo: null });
+    setPlayerForm({ name: "" });
     showToast("✅ Player saved!");
   };
 
   const handleDeletePlayer = async (id) => {
     try { await deletePlayer(id); } catch(e) {}
     setPlayers(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleTogglePlayerActive = async (player) => {
+    const updated = { ...player, is_active: !player.is_active };
+    try { await updatePlayer(updated); } catch(e) {}
+    setPlayers(prev => prev.map(p => p.id === updated.id ? updated : p));
+    showToast(updated.is_active ? "✅ Player re-activated!" : "📦 Player archived");
   };
 
   // Derived appearance counts
@@ -792,7 +808,7 @@ export default function App() {
       catch(e) { setFixtures(prev => [...prev, { ...fix, id: Date.now() }]); }
     }
     setShowFixtureForm(false); setEditingFixture(null);
-    setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "" });
+    setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", season_id: null });
     showToast("✅ Fixture saved!");
   };
 
@@ -923,21 +939,7 @@ export default function App() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: THEME.white, fontFamily: THEME.display, fontWeight: 600, fontSize: 17, letterSpacing: 0.5, lineHeight: 1.1 }}>Samba Snackers FC</div>
-          {editingTeamName ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-              <input autoFocus value={tempAgeGroup} onChange={e => setTempAgeGroup(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") handleUpdateAgeGroup(); if (e.key === "Escape") setEditingTeamName(false); }}
-                style={{ background: "rgba(255,255,255,0.15)", border: `1px solid ${THEME.sky}`, borderRadius: 6, color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: 1, padding: "3px 8px", fontFamily: THEME.mono, width: 150, outline: "none" }} />
-              <button onClick={handleUpdateAgeGroup} style={{ background: THEME.sky, border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontWeight: 700, fontSize: 11, color: THEME.navy, fontFamily: THEME.body }}>Save</button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 1 }}>
-              <div style={{ color: THEME.sky, fontFamily: THEME.mono, fontWeight: 600, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase" }}>{viewingSeason?.age_group || "Team"}</div>
-              {isAdmin && isViewingActive && (
-                <button onClick={() => { setTempAgeGroup(viewingSeason?.age_group || ""); setEditingTeamName(true); }} style={{ background: "rgba(95,178,217,0.18)", border: `1px solid rgba(95,178,217,0.35)`, borderRadius: 5, padding: "1px 6px", cursor: "pointer", color: THEME.sky, fontSize: 9, fontWeight: 700, fontFamily: THEME.body }}>Edit</button>
-              )}
-            </div>
-          )}
+          <div style={{ color: THEME.gold, fontFamily: THEME.mono, fontWeight: 600, fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", marginTop: 1 }}>Yellow Team</div>
         </div>
         {isAdmin ? (
           <span style={{ fontFamily: THEME.mono, fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", background: THEME.amber, color: "#3a2a05", padding: "4px 8px", borderRadius: 20, fontWeight: 700, flexShrink: 0 }}>🔓 Admin</span>
@@ -976,39 +978,7 @@ export default function App() {
 
 
       {/* Competition / Round filters — dropdowns, no horizontal swipe needed */}
-      {(mode === "history" || mode === "scorers") && (
-        <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: "10px 16px", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ flex: "1 1 140px", display: "flex", alignItems: "center", gap: 6 }}>
-            <select value={filterComp} onChange={e => { setFilterComp(e.target.value); setSelectedMatch(null); setFilterRound("All"); }}
-              style={{ flex: 1, padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e0e0e0", background: "#fff", color: THEME.navy, fontWeight: 700, fontSize: 13, fontFamily: THEME.body, cursor: "pointer", outline: "none" }}>
-              <option value="All">All Competitions</option>
-              {competitionsInUse.map(comp => <option key={comp} value={comp}>{comp}</option>)}
-            </select>
-            {isAdmin && filterComp !== "All" && competitions.includes(filterComp) && (
-              editingComp === competitions.indexOf(filterComp) ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <input autoFocus value={tempCompName} onChange={e => setTempCompName(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") handleRenameComp(competitions.indexOf(filterComp)); if (e.key === "Escape") setEditingComp(null); }}
-                    style={{ border: `1.5px solid ${THEME.sky}`, borderRadius: 10, padding: "8px 10px", fontSize: 13, fontWeight: 700, fontFamily: THEME.body, outline: "none", width: 110 }} />
-                  <button onClick={() => handleRenameComp(competitions.indexOf(filterComp))} style={{ background: THEME.navy, color: THEME.sky, border: "none", borderRadius: 8, padding: "8px 9px", cursor: "pointer", fontFamily: THEME.body, fontSize: 12, fontWeight: 800 }}>✓</button>
-                  <button onClick={() => setEditingComp(null)} style={{ background: "#eee", color: "#888", border: "none", borderRadius: 8, padding: "8px 9px", cursor: "pointer", fontFamily: THEME.body, fontSize: 12 }}>✕</button>
-                </div>
-              ) : (
-                <button onClick={() => { setEditingComp(competitions.indexOf(filterComp)); setTempCompName(filterComp); }}
-                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#bbb", padding: "4px", flexShrink: 0 }}>✏️</button>
-              )
-            )}
-          </div>
-
-          {mode === "history" && filterComp !== "All" && roundsInUse.length > 0 && (
-            <select value={filterRound} onChange={e => setFilterRound(e.target.value)}
-              style={{ flex: "1 1 120px", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e0e0e0", background: "#fff", color: THEME.navy, fontWeight: 700, fontSize: 13, fontFamily: THEME.body, cursor: "pointer", outline: "none" }}>
-              <option value="All">All Rounds</option>
-              {roundsInUse.map(round => <option key={round} value={round}>{round}</option>)}
-            </select>
-          )}
-        </div>
-      )}
+      
 
       <div style={{ padding: "20px 16px" }}>
         {/* ── HOME TAB ── */}
@@ -1032,47 +1002,6 @@ export default function App() {
                     </div>
                     <span style={{ color: THEME.ink30, fontSize: 18, marginLeft: 8 }}>›</span>
                   </button>
-
-                  {nextFixtureH2H.length > 0 && (() => {
-                    const h2hWins = nextFixtureH2H.filter(r => r.result === "W").length;
-                    const h2hDraws = nextFixtureH2H.filter(r => r.result === "D").length;
-                    const h2hLosses = nextFixtureH2H.filter(r => r.result === "L").length;
-                    const last5 = nextFixtureH2H.slice(0, 5);
-                    return (
-                      <>
-                        <div style={{ height: 1, background: "#eee", margin: "12px 0 10px" }} />
-                        <div onClick={() => setHomeH2HExpanded(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                          <span style={{ fontFamily: THEME.mono, fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: THEME.ink60, flexShrink: 0 }}>H2H</span>
-                          {last5.map((r, i) => (
-                            <span key={i} style={{ width: 17, height: 17, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: THEME.mono, fontSize: 8, fontWeight: 700, background: r.result === "W" ? "#4ade80" : r.result === "D" ? THEME.amber : "#f3a3ad", color: r.result === "W" ? "#0a3d1f" : r.result === "D" ? "#3a2a05" : "#5c1420" }}>
-                              {r.result}
-                            </span>
-                          ))}
-                          <span style={{ marginLeft: "auto", fontFamily: THEME.mono, fontSize: 10, fontWeight: 700, color: THEME.sky, flexShrink: 0, whiteSpace: "nowrap" }}>
-                            {homeH2HExpanded ? "Hide" : "Tap for scores"} ›
-                          </span>
-                        </div>
-
-                        {homeH2HExpanded && (
-                          <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed #e8e8e8" }}>
-                            <div style={{ fontFamily: THEME.mono, fontSize: 10, color: THEME.ink60, marginBottom: 6 }}>
-                              <b style={{ color: THEME.navy }}>{h2hWins}W</b> {h2hDraws}D <b style={{ color: THEME.loss }}>{h2hLosses}L</b> — {nextFixtureH2H.length} played
-                            </div>
-                            {last5.map((r, i) => (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #f2f2f2" : "none" }}>
-                                <span style={{ width: 19, height: 19, borderRadius: 5, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: THEME.mono, fontSize: 9, fontWeight: 700, background: r.result === "W" ? "#4ade80" : r.result === "D" ? THEME.amber : "#f3a3ad", color: r.result === "W" ? "#0a3d1f" : r.result === "D" ? "#3a2a05" : "#5c1420" }}>
-                                  {r.result}
-                                </span>
-                                <span style={{ fontFamily: THEME.mono, fontSize: 12, fontWeight: 700, color: THEME.navy, width: 34, flexShrink: 0 }}>{r.homeScore}–{r.awayScore}</span>
-                                <span style={{ fontSize: 10, color: THEME.ink60, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.competition}</span>
-                                <span style={{ fontFamily: THEME.mono, fontSize: 9, color: THEME.ink60, flexShrink: 0 }}>{r.date}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
                 </div>
               </>
             )}
@@ -1158,13 +1087,20 @@ export default function App() {
                     <button onClick={() => setAddingComp(false)} style={{ background: "#f0f0f0", color: "#888", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>✕</button>
                   </div>
                 )}
-                <label style={labelStyle}>Venue</label>
+                <label style={{ ...labelStyle, color: "#aaa" }}>Venue (optional)</label>
                 <input type="text" placeholder="e.g. Herrington Park, or Away" value={fixtureForm.venue} onChange={e => setFixtureForm(f => ({ ...f, venue: e.target.value }))} style={{ ...inputStyle, marginBottom: 12 }} />
-                <label style={labelStyle}>Notes (optional)</label>
+                <label style={{ ...labelStyle, color: "#aaa" }}>Notes (optional)</label>
                 <input type="text" placeholder="e.g. Kick-off 10am, meet 9:30" value={fixtureForm.notes} onChange={e => setFixtureForm(f => ({ ...f, notes: e.target.value }))} style={{ ...inputStyle, marginBottom: 16 }} />
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Season</label>
+                  <select value={fixtureForm.season_id || activeSeason?.id || ""} onChange={e => setFixtureForm(f => ({ ...f, season_id: parseInt(e.target.value) }))}
+                    style={{ ...inputStyle, colorScheme: "light" }}>
+                    {seasons.map(s => <option key={s.id} value={s.id}>{s.name}{s.is_active ? " (Current)" : ""}</option>)}
+                  </select>
+                </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={() => { setShowFixtureForm(false); setEditingFixture(null); }} style={{ flex: 1, padding: "12px", background: "#f0f0f0", color: "#888", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: THEME.body }}>Cancel</button>
-                  <button onClick={handleSaveFixture} disabled={!fixtureForm.date || !fixtureForm.opposition} style={{ flex: 2, padding: "12px", background: THEME.navy, color: THEME.sky, border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: THEME.body, opacity: (!fixtureForm.date || !fixtureForm.opposition) ? 0.5 : 1 }}>Save Fixture</button>
+                  <button onClick={handleSaveFixture} disabled={!fixtureForm.date || !fixtureForm.opposition} style={{ flex: 2, padding: "12px", background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: THEME.body, opacity: (!fixtureForm.date || !fixtureForm.opposition) ? 0.5 : 1 }}>Save Fixture</button>
                 </div>
                 {editingFixture && (
                   <button onClick={() => { if (window.confirm(`Delete fixture vs ${editingFixture.opposition}?`)) { handleDeleteFixture(editingFixture.id); setShowFixtureForm(false); setEditingFixture(null); } }}
@@ -1245,7 +1181,7 @@ export default function App() {
             {[
               { key: "new", icon: "⚽", accent: THEME.sky, title: "Log a Result", desc: "Add a new match result", disabled: !isViewingActive },
               { key: "fixtures", icon: "📅", accent: "#f472b6", title: "Fixtures", desc: "Add or edit upcoming matches", disabled: !isViewingActive },
-              { key: "squad", icon: "🏃", accent: THEME.pitch, title: "Squad", desc: "Players, squad numbers, photos" },
+              { key: "squad", icon: "🏃", accent: THEME.pitch, title: "Squad", desc: "Manage the squad, track appearances" },
               { key: "teams", icon: "👥", accent: THEME.amber, title: "Teams", desc: "Opposition club list & badges" },
               { key: "report", icon: "📊", accent: "#c084fc", title: "Report", desc: "Season stats & shareable image" },
               { key: "seasons", icon: "🗓", accent: THEME.loss, title: "Season History", desc: "Past seasons, archive & switch" },
@@ -1317,6 +1253,12 @@ export default function App() {
                       <div style={{ background: "#f8faff", borderRadius: 12, marginTop: -8, marginBottom: 4, boxShadow: "0 4px 8px rgba(0,0,0,0.06)", overflow: "hidden" }}>
                         {isAdmin && (
                           <div style={{ display: "flex", borderTop: "1px solid #e8eeff" }}>
+                            <button onClick={async () => {
+                              const text = `Samba Snackers FC\n${m.result === "W" ? "✅ WIN" : m.result === "L" ? "❌ LOSS" : "🟡 DRAW"} vs ${m.opposition} · ${m.homeScore}–${m.awayScore}${(m.scorers||[]).length ? "\n⚽ " + m.scorers.join(", ") : ""}${m.motm ? "\n⭐ MOTM: " + m.motm : ""}\n${m.date}`;
+                              try { await navigator.share({ text }); } catch(e) { try { await navigator.clipboard.writeText(text); showToast("📋 Copied!"); } catch(e2) {} }
+                            }} style={{ flex: 1, padding: "12px", background: "none", border: "none", borderRight: "1px solid #e8eeff", cursor: "pointer", fontFamily: "inherit", fontWeight: 800, fontSize: 13, color: "#1a7a38", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                              📤 Share
+                            </button>
                             <button onClick={() => {
                                 const initialGoalCounts = {};
                                 (m.scorers || []).forEach(s => {
@@ -1410,7 +1352,8 @@ export default function App() {
                     ) : (
                       <input type="text" value={typeof editingResult.scorers === "string" ? editingResult.scorers : (editingResult.scorers || []).join(", ")} onChange={e => setEditingResult(r => ({ ...r, scorers: e.target.value }))} style={inputStyle} />
                     )}
-                  </div><div style={{ marginBottom: 14 }}>
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
                     <label style={labelStyle}>Season</label>
                     <select value={editingResult.season_id || ""} onChange={e => setEditingResult(r => ({ ...r, season_id: parseInt(e.target.value) }))}
                       style={{ ...inputStyle, colorScheme: "light" }}>
@@ -1461,9 +1404,10 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {scorersTab === "goals" && <Leaderboard data={buildGoalBoard(filteredResults)} label="Top Goal Scorers" emptyMsg="No goals recorded yet." filterLabel={filterComp === "All" ? "All Competitions" : filterComp} accentColor="#FFD700" onRowClick={openPlayerProfile} />}
-            {scorersTab === "motm" && <Leaderboard data={buildAwardBoard(filteredResults, "motm")} label="Man of the Match" emptyMsg="No MOTM awards yet." filterLabel={filterComp === "All" ? "All Competitions" : filterComp} accentColor="#FFD700" onRowClick={openPlayerProfile} />}
-            <p style={{ textAlign: "center", color: "#bbb", fontSize: 12, marginTop: 14, letterSpacing: 1 }}>SUNDERLAND LEON {(viewingSeason?.age_group || "").toUpperCase()}</p>
+            {scorersTab === "goals" && <Leaderboard data={buildGoalBoard(filteredResults)} label="Top Goal Scorers" emptyMsg="No goals recorded yet." filterLabel={viewingSeason?.name || "Season 1"} accentColor="#FFD700" onRowClick={openPlayerProfile} />}
+            {scorersTab === "motm" && <Leaderboard data={buildAwardBoard(filteredResults, "motm")} label="Man of the Match" emptyMsg="No MOTM awards yet." filterLabel={viewingSeason?.name || "Season 1"} accentColor="#ffd700" onRowClick={openPlayerProfile} />}
+            
+            <p style={{ textAlign: "center", color: "#bbb", fontSize: 12, marginTop: 14, letterSpacing: 1 }}>SAMBA SNACKERS {(viewingSeason?.age_group || "").toUpperCase()}</p>
           </div>
         )}
 
@@ -1580,6 +1524,107 @@ export default function App() {
           </div>
         )}
 
+        {/* ── SQUAD TAB ── */}
+        {mode === "squad" && isAdmin && (() => {
+          const appCounts = appearanceCountBySeason(viewingSeason?.id);
+          const goalBoard = buildGoalBoard(seasonResults);
+          const motmBoard = buildAwardBoard(seasonResults, "motm");
+          return (
+            <div style={{ maxWidth: 520, margin: "0 auto" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <span style={{ fontFamily: THEME.mono, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60 }}>Active Squad</span>
+                <button onClick={() => { setEditingPlayer(null); setPlayerForm({ name: "" }); setShowPlayerModal(true); }}
+                  style={{ background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 10, padding: "8px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                  + Add Player
+                </button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {/* Active players */}
+                {players.filter(p => p.is_active !== false).map(p => {
+                  const apps = appCounts[p.id] || 0;
+                  const goals = goalBoard.find(g => g.name === p.name)?.count || 0;
+                  const motms = motmBoard.find(m => m.name === p.name)?.count || 0;
+                  return (
+                    <div key={p.id} style={{ background: "#fff", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                      <div onClick={() => openPlayerProfile(p.name)} style={{ width: 44, height: 44, borderRadius: "50%", background: "#005c1f", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                        <span style={{ color: "#FFD700", fontSize: 14, fontWeight: 900 }}>{p.name.slice(0,2).toUpperCase()}</span>
+                      </div>
+                      <div style={{ flex: 1, cursor: "pointer" }} onClick={() => openPlayerProfile(p.name)}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#005c1f" }}>{p.name}</div>
+                        <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
+                          <span style={{ fontSize: 11, color: "#888" }}>📅 {apps} apps</span>
+                          {goals > 0 && <span style={{ fontSize: 11, color: "#1f6f4a" }}>⚽ {goals} goals</span>}
+                          {motms > 0 && <span style={{ fontSize: 11, color: "#e8a93b" }}>⭐ {motms} MOTM</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => { setEditingPlayer(p); setPlayerForm({ name: p.name }); setShowPlayerModal(true); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#aaa" }}>✏️</button>
+                      <button onClick={() => handleTogglePlayerActive(p)} title="Archive player"
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>📦</button>
+                    </div>
+                  );
+                })}
+                {players.filter(p => p.is_active !== false).length === 0 && (
+                  <p style={{ textAlign: "center", color: "#bbb", fontSize: 14, padding: "20px 0" }}>No players yet — tap + Add Player to get started.</p>
+                )}
+                {/* Former players */}
+                {players.filter(p => p.is_active === false).length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <button onClick={() => setShowFormerPlayers(v => !v)}
+                      style={{ width: "100%", background: "none", border: "1.5px dashed #e0e0e0", borderRadius: 10, padding: "10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 13, color: "#aaa" }}>
+                      {showFormerPlayers ? "▲ Hide" : "▼ Show"} Former Players ({players.filter(p => p.is_active === false).length})
+                    </button>
+                    {showFormerPlayers && players.filter(p => p.is_active === false).map(p => {
+                      const goals = buildGoalBoard(results).find(g => g.name === p.name)?.count || 0;
+                      const motms = buildAwardBoard(results, "motm").find(m => m.name === p.name)?.count || 0;
+                      const totalApps = appearances.filter(a => a.player_id === p.id).length;
+                      return (
+                        <div key={p.id} style={{ background: "#f7f8fa", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, marginTop: 8, opacity: 0.75 }}>
+                          <div onClick={() => openPlayerProfile(p.name)} style={{ width: 40, height: 40, borderRadius: "50%", background: "#bbb", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                            <span style={{ color: "#fff", fontSize: 12, fontWeight: 900 }}>{p.name.slice(0,2).toUpperCase()}</span>
+                          </div>
+                          <div style={{ flex: 1, cursor: "pointer" }} onClick={() => openPlayerProfile(p.name)}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#888" }}>{p.name} <span style={{ fontSize: 10, color: "#bbb" }}>(Former)</span></div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                              {totalApps > 0 && <span style={{ fontSize: 11, color: "#aaa" }}>📅 {totalApps} apps</span>}
+                              {goals > 0 && <span style={{ fontSize: 11, color: "#aaa" }}>⚽ {goals} goals</span>}
+                              {motms > 0 && <span style={{ fontSize: 11, color: "#aaa" }}>⭐ {motms} MOTM</span>}
+                            </div>
+                          </div>
+                          <button onClick={() => handleTogglePlayerActive(p)} title="Re-activate"
+                            style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#888" }}>↩ Restore</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Player modal */}
+              {showPlayerModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                  <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 400 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: "#005c1f" }}>{editingPlayer ? "✏️ EDIT PLAYER" : "➕ ADD PLAYER"}</span>
+                      <button onClick={() => { setShowPlayerModal(false); setEditingPlayer(null); }} style={{ background: "#f0f0f0", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#888", fontFamily: "inherit" }}>✕</button>
+                    </div>
+                    <div style={{ marginBottom: 20 }}>
+                      <label style={labelStyle}>Player Name</label>
+                      <input type="text" placeholder="" value={playerForm.name} onChange={e => setPlayerForm(f => ({ ...f, name: e.target.value }))}
+                        onKeyDown={e => { if (e.key === "Enter" && playerForm.name.trim()) handleSavePlayer(); }}
+                        style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
+                    </div>
+                    <button onClick={handleSavePlayer} disabled={!playerForm.name.trim()}
+                      style={{ width: "100%", padding: "15px", background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 900, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", opacity: !playerForm.name.trim() ? 0.5 : 1 }}>
+                      {editingPlayer ? "Save Changes" : "Add to Squad"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── NEW RESULT TAB ── */}
         {mode === "new" && isAdmin && (
           <div style={{ maxWidth: 520, margin: "0 auto" }}>
@@ -1628,7 +1673,9 @@ export default function App() {
                     <label style={labelStyle}>Opp Score</label>
                     <input type="number" placeholder="" value={form.awayScore} onChange={e => setForm(f => ({ ...f, awayScore: e.target.value }))} style={inputStyle} />
                   </div>
-                </div><div style={{ marginBottom: 16 }}>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
                   <label style={labelStyle}>Season</label>
                   <select value={form.season_id || activeSeason?.id || ""} onChange={e => setForm(f => ({ ...f, season_id: parseInt(e.target.value) }))}
                     style={{ ...inputStyle, colorScheme: "light" }}>
@@ -1654,8 +1701,7 @@ export default function App() {
                               }
                             }}
                               style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 20, border: selected ? "none" : "1.5px solid #e0e0e0", background: selected ? "#005c1f" : "#fff", color: selected ? "#FFD700" : "#888", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-                              <span style={{ fontWeight: 900, fontSize: 11, color: selected ? "#FFD700" : "#aaa" }}>#{p.squad_number || "?"}</span>
-                              {p.name}
+                                {p.name}
                             </button>
                           );
                         })}
@@ -1667,7 +1713,7 @@ export default function App() {
                       <div style={{ marginBottom: 16 }}>
                         <label style={labelStyle}>Goal Scorers</label>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          {selectedSquad.map(pid => {
+                          {selectedSquad.filter(pid => players.find(pl => pl.id === pid)?.is_active !== false).map(pid => {
                             const p = players.find(pl => pl.id === pid);
                             if (!p) return null;
                             const count = goalCounts[pid] || 0;
@@ -1696,7 +1742,7 @@ export default function App() {
                       <div style={{ marginBottom: 16 }}>
                         <label style={labelStyle}>⭐ Man of the Match</label>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {selectedSquad.map(pid => {
+                          {selectedSquad.filter(pid => players.find(pl => pl.id === pid)?.is_active !== false).map(pid => {
                             const p = players.find(pl => pl.id === pid);
                             if (!p) return null;
                             const selected = motmPlayerId === pid;
@@ -1711,137 +1757,23 @@ export default function App() {
                       </div>
                     )}
 
-
+                    {/* Opp MOTM — only show when squad selected */}
+                    
                   </>
                 ) : (
                   <>
                     {/* Fallback text fields if no squad set up yet */}
                     <div style={{ marginBottom: 16 }}>
                       <label style={labelStyle}>Goal Scorers (comma separated)</label>
-                      <input type="text" placeholder="" value={form.scorers} onChange={e => setForm(f => ({ ...f, scorers: e.target.value }))} style={inputStyle} />
+                      <input type="text" placeholder="e.g. Grayson, Kayson ×2, Reggie" value={form.scorers} onChange={e => setForm(f => ({ ...f, scorers: e.target.value }))} style={inputStyle} />
                     </div>
                     <div style={{ marginBottom: 16 }}>
-                      <label style={labelStyle}>⭐ Man of Match</label>
-                      <input type="text" placeholder="" value={form.motm} onChange={e => setForm(f => ({ ...f, motm: e.target.value }))} style={inputStyle} />
-                    </div>
-                  </>
-                )}
-
-                <button onClick={handleCreate} disabled={!form.date || !form.opposition || form.homeScore === "" || form.awayScore === ""}
-                  style={{ width: "100%", padding: "16px", background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 12, fontSize: 17, fontWeight: 900, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", opacity: (!form.date || !form.opposition || form.homeScore === "" || form.awayScore === "") ? 0.5 : 1 }}>
-                  Generate Result Card
-                </button>
-              </div>
-            ) : (
-              <div>
-                <ResultCard match={newResult} teamName={viewingSeason?.age_group} compColor={getCompColor(competitions, newResult.competition)} players={players} teams={teams} />
-                <button onClick={() => { setNewResult(null); setOppLogo(null); setSelectedSquad([]); setGoalCounts({}); setMotmPlayerId(null);  setForm({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: form.competition, motm: "", season_id: activeSeason?.id || null }); }}
-                  style={{ marginTop: 16, width: "100%", padding: "14px", background: "#fff", color: "#005c1f", border: "2px solid #e8e8e8", borderRadius: 12, fontSize: 15, fontWeight: 800, letterSpacing: 2, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" }}>
-                  ← Add Another Result
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── SQUAD TAB ── */}
-        {mode === "squad" && isAdmin && (
-          <div style={{ maxWidth: 520, margin: "0 auto" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#888", letterSpacing: 2, textTransform: "uppercase" }}>
-                Squad — {viewingSeason?.age_group}
-              </span>
-              <button onClick={() => { setShowPlayerModal(true); setEditingPlayer(null); setPlayerForm({ name: "", squad_number: "", photo: null }); }}
-                style={{ background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 10, padding: "8px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-                + Add Player
-              </button>
-            </div>
-
-            {players.length === 0 && <p style={{ textAlign: "center", color: "#bbb", fontSize: 14, marginTop: 40 }}>No players added yet. Tap + Add Player to get started.</p>}
-
-            {(() => {
-              const appCounts = appearanceCountBySeason(viewingSeason?.id);
-              const goalBoard = buildGoalBoard(seasonResults);
-              const motmBoard = buildAwardBoard(seasonResults, "motm");
-              return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {players.map(p => {
-                    const apps = appCounts[p.id] || 0;
-                    const goals = goalBoard.find(g => g.name === p.name)?.count || 0;
-                    const motms = motmBoard.find(m => m.name === p.name)?.count || 0;
-                    return (
-                      <div key={p.id} style={{ background: "#fff", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                        {/* Photo or initials */}
-                        <div style={{ width: 44, height: 44, borderRadius: "50%", background: p.photo ? "transparent" : "#005c1f", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                          {p.photo
-                            ? <img src={p.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={p.name} />
-                            : <span style={{ color: "#FFD700", fontSize: 14, fontWeight: 900 }}>{p.name.slice(0,2).toUpperCase()}</span>
-                          }
-                        </div>
-                        {/* Squad number */}
-                        <div style={{ width: 28, height: 28, borderRadius: 6, background: "#f0f4ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <span style={{ fontSize: 12, fontWeight: 900, color: "#005c1f" }}>{p.squad_number || "—"}</span>
-                        </div>
-                        {/* Name */}
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: "#005c1f" }}>{p.name}</div>
-                          <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
-                            <span style={{ fontSize: 11, color: "#888" }}>📅 {apps} apps</span>
-                            {goals > 0 && <span style={{ fontSize: 11, color: "#FFD700" }}>⚽ {goals} goals</span>}
-                            {motms > 0 && <span style={{ fontSize: 11, color: "#ffd700" }}>⭐ {motms} MOTM</span>}
-                          </div>
-                        </div>
-                        <button onClick={() => { setEditingPlayer(p); setPlayerForm({ name: p.name, squad_number: p.squad_number || "", photo: p.photo || null }); setShowPlayerModal(true); }}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#aaa" }}>✏️</button>
-                        <button onClick={() => { if (window.confirm(`Remove ${p.name} from squad?`)) handleDeletePlayer(p.id); }}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#ddd" }}>🗑️</button>
-                      </div>
-                    );
-                  })}
+                  <label style={labelStyle}>⭐ Man of Match</label>
+                  <input type="text" placeholder="" value={form.motm} onChange={e => setForm(f => ({ ...f, motm: e.target.value }))} style={inputStyle} />
                 </div>
-              );
-            })()}
-
-            {/* Player modal */}
-            {showPlayerModal && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-                <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 400 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                    <span style={{ fontSize: 18, fontWeight: 900, color: "#005c1f" }}>{editingPlayer ? "✏️ EDIT PLAYER" : "➕ ADD PLAYER"}</span>
-                    <button onClick={() => { setShowPlayerModal(false); setEditingPlayer(null); }} style={{ background: "#f0f0f0", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 800, fontSize: 14, color: "#888", fontFamily: "inherit" }}>✕</button>
-                  </div>
-
-                  {/* Photo */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: playerForm.photo ? "transparent" : "#f0f4ff", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, border: "2px dashed #FFD700" }}>
-                      {playerForm.photo
-                        ? <img src={playerForm.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
-                        : <span style={{ fontSize: 24 }}>📷</span>
-                      }
-                    </div>
-                    <div>
-                      <input ref={playerPhotoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
-                        const file = e.target.files[0]; if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = ev => setPlayerForm(f => ({ ...f, photo: ev.target.result }));
-                        reader.readAsDataURL(file);
-                      }} />
-                      <button onClick={() => playerPhotoRef.current.click()} style={{ background: "#f0f4ff", border: "1.5px solid #FFD700", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#FFD700", display: "block", marginBottom: 6 }}>
-                        {playerForm.photo ? "Change photo" : "Add photo (optional)"}
-                      </button>
-                      {playerForm.photo && <button onClick={() => setPlayerForm(f => ({ ...f, photo: null }))} style={{ background: "none", border: "none", color: "#d50000", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>✕ Remove</button>}
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: 14 }}>
+                <div style={{ marginBottom: 14 }}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Player Name</label>
-                    <input type="text" placeholder="" value={playerForm.name} onChange={e => setPlayerForm(f => ({ ...f, name: e.target.value }))}
-                      style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
-                  </div>
-
-                  <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Squad Number</label>
-                    <input type="number" placeholder="e.g. 7" value={playerForm.squad_number} onChange={e => setPlayerForm(f => ({ ...f, squad_number: e.target.value }))}
+                    <input type="text" placeholder="e.g. Grayson" value={playerForm.name} onChange={e => setPlayerForm(f => ({ ...f, name: e.target.value }))}
                       style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
                   </div>
 
@@ -1878,7 +1810,7 @@ export default function App() {
 
                 {/* Header */}
                 <div style={{ background: "#005c1f", padding: "20px", textAlign: "center", borderBottom: "1px solid rgba(135,206,235,0.2)" }}>
-                  <div style={{ color: "#FFD700", fontSize: 10, fontWeight: 700, letterSpacing: 3, marginBottom: 4 }}>SUNDERLAND SAMBA SNACKERS FC</div>
+                  <div style={{ color: "#FFD700", fontSize: 10, fontWeight: 700, letterSpacing: 3, marginBottom: 4 }}>SAMBA SNACKERS FC</div>
                   <div style={{ color: "#fff", fontSize: 22, fontWeight: 900, letterSpacing: 2 }}>{viewingSeason?.name} SEASON</div>
                   <div style={{ color: "#FFD700", fontSize: 11, letterSpacing: 2, marginTop: 2 }}>{viewingSeason?.age_group?.toUpperCase()} · END OF SEASON REPORT</div>
                 </div>
@@ -1971,7 +1903,7 @@ export default function App() {
                       <div style={{ color: "#FFD700", fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 10, textAlign: "center" }}>BIGGEST WIN OF THE SEASON</div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ textAlign: "center", flex: 1 }}>
-                          <div style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>SUNDERLAND LEON</div>
+                          <div style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>SAMBA SNACKERS</div>
                           <div style={{ color: "#FFD700", fontSize: 9 }}>{viewingSeason?.age_group?.toUpperCase()}</div>
                         </div>
                         <div style={{ textAlign: "center", flex: 1 }}>
@@ -2060,11 +1992,11 @@ export default function App() {
             <p style={{ fontSize: 13, color: "#888", marginBottom: 20, lineHeight: 1.5 }}>This creates a new season with fresh results. All previous data is preserved in Season History.</p>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Season Name</label>
-              <input type="text" placeholder="e.g. Season 2" value={newSeasonForm.name} onChange={e => setNewSeasonForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
+              <input type="text" placeholder="e.g. 2026/27" value={newSeasonForm.name} onChange={e => setNewSeasonForm(f => ({ ...f, name: e.target.value }))} style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
             </div>
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#FFD700", letterSpacing: 2, marginBottom: 6, textTransform: "uppercase" }}>Age Group</label>
-              <input type="text" placeholder="e.g. Sunday League 2025/26 (optional)" value={newSeasonForm.age_group} onChange={e => setNewSeasonForm(f => ({ ...f, age_group: e.target.value }))} style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
+              <input type="text" placeholder="e.g. Under 10 Blue" value={newSeasonForm.age_group} onChange={e => setNewSeasonForm(f => ({ ...f, age_group: e.target.value }))} style={{ width: "100%", padding: "12px 14px", border: "2px solid #e8e8e8", borderRadius: 10, fontSize: 16, fontFamily: "inherit", fontWeight: 600, color: "#005c1f", outline: "none", boxSizing: "border-box" }} />
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => { setShowSeasonModal(false); setNewSeasonForm({ name: "", age_group: "" }); }} style={{ flex: 1, padding: "14px", background: "#f0f0f0", color: "#888", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
