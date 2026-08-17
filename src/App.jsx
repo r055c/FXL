@@ -442,23 +442,6 @@ function ResultCard({ match, teamName = "Team", compColor = "#FFD700", players =
                   </div>
                 );
               })()}
-              >
-                    {player?.photo ? (
-                      <div style={{ width: 52, height: 52, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "2px solid #ff7eb3" }}>
-                        <img src={player.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={match.oppMotm} />
-                      </div>
-                    ) : (
-                      <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "2px solid #ff7eb3" }}>
-                        <span style={{ color: "#ff7eb3", fontSize: 13, fontWeight: 900 }}>{match.oppMotm.slice(0,2).toUpperCase()}</span>
-                      </div>
-                    )}
-                    <div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#aaa", letterSpacing: 2, textTransform: "uppercase", display: "block", marginBottom: 2 }}>Opp. Man of Match</span>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: "#555" }}>{match.oppMotm}</span>
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           </>
         )}
