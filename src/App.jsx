@@ -1755,6 +1755,33 @@ export default function App() {
                   </>
                 )}
 
+                <div style={{ marginBottom: 20 }}>
+                  <label style={labelStyle}>Opposition Logo (optional)</label>
+                  <input ref={fileRef} type="file" accept="image/*" onChange={e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => setOppLogo(ev.target.result); reader.readAsDataURL(file); }} style={{ display: "none" }} />
+                  <button onClick={() => fileRef.current.click()}
+                    style={{ border: `2px dashed #FFD700`, borderRadius: 10, background: oppLogo ? "#fffde7" : "#fff", padding: "14px 20px", width: "100%", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: "#005c1f", display: "flex", alignItems: "center", gap: 10, justifyContent: "center", boxSizing: "border-box" }}>
+                    {oppLogo ? <img src={oppLogo} style={{ width: 36, height: 36, objectFit: "contain" }} alt="" /> : "📁"}
+                    {oppLogo ? "Logo uploaded ✓" : "Upload opposition logo"}
+                  </button>
+                </div>
+
+                <button onClick={handleCreate} disabled={!form.date || !form.opposition || form.homeScore === "" || form.awayScore === ""}
+                  style={{ width: "100%", padding: "16px", background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 12, fontSize: 17, fontWeight: 900, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", opacity: (!form.date || !form.opposition || form.homeScore === "" || form.awayScore === "") ? 0.5 : 1 }}>
+                  Generate Result Card
+                </button>
+              </div>
+            ) : (
+              <div>
+                <ResultCard match={newResult} teamName={viewingSeason?.age_group} compColor={getCompColor(competitions, newResult.competition)} players={players} teams={teams} />
+                <button onClick={() => { setNewResult(null); setOppLogo(null); setForm({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: form.competition, motm: "", season_id: form.season_id }); }}
+                  style={{ marginTop: 16, width: "100%", padding: "14px", background: "#fff", color: "#005c1f", border: "2px solid #e8e8e8", borderRadius: 12, fontSize: 15, fontWeight: 800, letterSpacing: 2, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" }}>
+                  ← Add Another Result
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── SEASON REPORT TAB ── */}
         {mode === "report" && isAdmin && (() => {
           const sResults = seasonResults;
