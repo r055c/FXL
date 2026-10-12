@@ -556,12 +556,17 @@ export default function App() {
   // ── Home dashboard derived data ─────────────────────────
   const seasonResultsSorted = seasonResults.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
   const latestResult = seasonResultsSorted[0] || null;
+  const recentResults = seasonResultsSorted.slice(0, 3);
   const homeTopScorer = buildGoalBoard(seasonResults)[0] || null;
+  const homeMotmBoard = buildAwardBoard(seasonResults, "motm").slice(0, 3);
+  const homeFormGuide = seasonResultsSorted.slice(0, 5).reverse();
   const homeSeasonRecord = {
     played: seasonResults.length,
     won: seasonResults.filter(r => r.result === "W").length,
     drawn: seasonResults.filter(r => r.result === "D").length,
     lost: seasonResults.filter(r => r.result === "L").length,
+    gf: seasonResults.reduce((acc, r) => acc + (parseInt(r.homeScore) || 0), 0),
+    ga: seasonResults.reduce((acc, r) => acc + (parseInt(r.awayScore) || 0), 0),
   };
 
   // ── Fixtures derived data ────────────────────────────────
@@ -889,6 +894,8 @@ export default function App() {
         {/* ── HOME TAB ── */}
         {mode === "home" && (
           <div style={{ maxWidth: 520, margin: "0 auto" }}>
+
+            {/* Next fixture */}
             {nextFixture && (
               <>
                 <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -903,7 +910,7 @@ export default function App() {
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontFamily: THEME.font, fontWeight: 600, fontSize: 15, color: THEME.green, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>vs {nextFixture.opposition}</div>
-                      <div style={{ fontSize: 12, color: THEME.ink60, marginTop: 2 }}>{nextFixture.venue ? `📍 ${nextFixture.venue}` : nextFixture.competition || "\u00A0"}</div>
+                      <div style={{ fontSize: 12, color: THEME.ink60, marginTop: 2 }}>{nextFixture.venue ? "📍 " + nextFixture.venue : nextFixture.competition || " "}</div>
                     </div>
                     <span style={{ color: THEME.ink30, fontSize: 18, marginLeft: 8 }}>›</span>
                   </button>
@@ -911,8 +918,9 @@ export default function App() {
               </>
             )}
 
+            {/* Season record */}
             <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10 }}>Season Record</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               {[
                 { l: "Played", v: homeSeasonRecord.played, c: THEME.green },
                 { l: "Won", v: homeSeasonRecord.won, c: THEME.pitch },
@@ -925,27 +933,100 @@ export default function App() {
                 </div>
               ))}
             </div>
+            {homeSeasonRecord.played > 0 && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+                {[
+                  { l: "For", v: homeSeasonRecord.gf, c: THEME.pitch },
+                  { l: "Against", v: homeSeasonRecord.ga, c: THEME.loss },
+                  { l: "Diff", v: homeSeasonRecord.gf - homeSeasonRecord.ga, c: homeSeasonRecord.gf >= homeSeasonRecord.ga ? THEME.pitch : THEME.loss },
+                ].map(x => (
+                  <div key={x.l} style={{ flex: 1, background: THEME.white, borderRadius: 12, padding: "10px 6px", textAlign: "center", boxShadow: "0 2px 8px rgba(18,23,46,0.06)" }}>
+                    <div style={{ fontFamily: THEME.font, fontSize: 20, fontWeight: 700, color: x.c }}>{x.l === "Diff" && x.v > 0 ? "+" + x.v : x.v}</div>
+                    <div style={{ fontSize: 10, color: THEME.ink60, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Goals {x.l}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10 }}>Latest Result</div>
-            {latestResult ? (
-              <ScoreCard match={latestResult} compColor={getCompColor(competitions, latestResult.competition)} />
+            {/* Form guide */}
+            {homeFormGuide.length > 0 && (
+              <>
+                <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10 }}>Form</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 24, alignItems: "center" }}>
+                  {homeFormGuide.map((r, i) => {
+                    const bg = r.result === "W" ? THEME.pitch : r.result === "L" ? THEME.loss : THEME.amber;
+                    return (
+                      <div key={i} style={{ width: 40, height: 40, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 900 }}>
+                        {r.result}
+                      </div>
+                    );
+                  })}
+                  {homeFormGuide.length < 5 && Array.from({ length: 5 - homeFormGuide.length }).map((_, i) => (
+                    <div key={"e" + i} style={{ width: 40, height: 40, borderRadius: "50%", background: THEME.chalk, border: "2px dashed " + THEME.ink30 }} />
+                  ))}
+                  <span style={{ fontSize: 11, color: THEME.ink60, marginLeft: 4 }}>Last {homeFormGuide.length}</span>
+                </div>
+              </>
+            )}
+
+            {/* Recent results */}
+            <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              Recent Results
+              {seasonResultsSorted.length > 3 && <span onClick={() => setMode("results")} style={{ color: THEME.gold, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>See all ›</span>}
+            </div>
+            {recentResults.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+                {recentResults.map(r => (
+                  <ScoreCard key={r.id} match={r} compColor={getCompColor(competitions, r.competition)} />
+                ))}
+              </div>
             ) : (
-              <div style={{ textAlign: "center", padding: "30px 20px", color: THEME.ink30, background: THEME.white, borderRadius: 16 }}>
+              <div style={{ textAlign: "center", padding: "30px 20px", color: THEME.ink30, background: THEME.white, borderRadius: 16, marginBottom: 24 }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>⚽</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: THEME.ink60 }}>No results logged yet</div>
               </div>
             )}
 
-            {homeTopScorer && (
+            {/* Season leaders */}
+            {(buildGoalBoard(seasonResults).length > 0 || homeMotmBoard.length > 0) && (
               <>
-                <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, margin: "24px 0 10px" }}>Top Scorer</div>
-                <div onClick={() => openPlayerProfile(homeTopScorer.name)} style={{ display: "flex", alignItems: "center", gap: 12, background: THEME.white, borderRadius: 14, padding: "12px 16px", boxShadow: "0 2px 8px rgba(18,23,46,0.06)", cursor: "pointer" }}>
-                  <div style={{ fontFamily: THEME.font, fontWeight: 600, fontSize: 20, color: THEME.amber, width: 22 }}>1</div>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: THEME.green, color: THEME.gold, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: THEME.font, fontWeight: 600, fontSize: 13 }}>{homeTopScorer.name.slice(0,2).toUpperCase()}</div>
-                  <div style={{ flex: 1, fontWeight: 600, fontSize: 14, color: THEME.green }}>{homeTopScorer.name}</div>
-                  <div style={{ fontFamily: THEME.font, fontWeight: 700, fontSize: 16, color: THEME.pitch }}>{homeTopScorer.count}</div>
+                <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10 }}>Season Leaders</div>
+                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                  <div style={{ flex: 1, background: THEME.white, borderRadius: 14, padding: "14px 16px", boxShadow: "0 2px 8px rgba(18,23,46,0.06)" }}>
+                    <div style={{ fontSize: 10, color: THEME.ink60, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>⚽ Top Scorers</div>
+                    {buildGoalBoard(seasonResults).slice(0, 3).length > 0 ? buildGoalBoard(seasonResults).slice(0, 3).map((p, i) => (
+                      <div key={p.name} onClick={() => openPlayerProfile(p.name)} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: i < 2 ? 8 : 0, cursor: "pointer" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? THEME.amber : THEME.ink60, width: 14, textAlign: "center" }}>{i + 1}</span>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: THEME.green, color: THEME.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, flexShrink: 0 }}>{p.name.slice(0,2).toUpperCase()}</div>
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: THEME.green, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 900, color: THEME.pitch }}>{p.count}</span>
+                      </div>
+                    )) : <div style={{ fontSize: 12, color: THEME.ink30, textAlign: "center", paddingTop: 8 }}>No goals yet</div>}
+                  </div>
+                  <div style={{ flex: 1, background: THEME.white, borderRadius: 14, padding: "14px 16px", boxShadow: "0 2px 8px rgba(18,23,46,0.06)" }}>
+                    <div style={{ fontSize: 10, color: THEME.ink60, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>⭐ MOTM</div>
+                    {homeMotmBoard.length > 0 ? homeMotmBoard.map((p, i) => (
+                      <div key={p.name} onClick={() => openPlayerProfile(p.name)} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: i < 2 ? 8 : 0, cursor: "pointer" }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? THEME.amber : THEME.ink60, width: 14, textAlign: "center" }}>{i + 1}</span>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: THEME.green, color: THEME.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, flexShrink: 0 }}>{p.name.slice(0,2).toUpperCase()}</div>
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: THEME.green, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 900, color: THEME.amber }}>{p.count}</span>
+                      </div>
+                    )) : <div style={{ fontSize: 12, color: THEME.ink30, textAlign: "center", paddingTop: 8 }}>—</div>}
+                  </div>
                 </div>
               </>
+            )}
+
+            {/* Season goals banner */}
+            {homeSeasonRecord.played > 0 && (
+              <div style={{ background: THEME.green, borderRadius: 16, padding: "16px 20px", marginTop: 8, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ color: THEME.gold, fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Season Goals</div>
+                  <div style={{ color: "#fff", fontSize: 28, fontWeight: 900 }}>{homeSeasonRecord.gf} <span style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.6)" }}>scored</span></div>
+                </div>
+                <div style={{ fontSize: 40 }}>⚽</div>
+              </div>
             )}
           </div>
         )}
