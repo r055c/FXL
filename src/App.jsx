@@ -70,13 +70,16 @@ function getCompColor(comps, comp) { const i = comps.indexOf(comp); return COMP_
 
 // ── Helpers ───────────────────────────────────────────────
 function parseScorer(str) {
-  const m = str.trim().match(/^(.+?)\s*[×x](\d+)$/);
-  if (m) return { name: m[1].trim(), goals: parseInt(m[2]) };
-  return { name: str.trim(), goals: 1 };
+  const raw = str.trim();
+  const loan = raw.endsWith(' [loan]');
+  const s = loan ? raw.slice(0, -7) : raw;
+  const m = s.trim().match(/^(.+?)\s*[×x](\d+)$/);
+  if (m) return { name: m[1].trim(), goals: parseInt(m[2]), loan };
+  return { name: s.trim(), goals: 1, loan };
 }
 function buildGoalBoard(results) {
   const t = {};
-  results.forEach(r => (r.scorers || []).forEach(s => { const { name, goals } = parseScorer(s); t[name] = (t[name] || 0) + goals; }));
+  results.forEach(r => (r.scorers || []).forEach(s => { const { name, goals, loan } = parseScorer(s); if (!loan) t[name] = (t[name] || 0) + goals; }));
   return Object.entries(t).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 }
 function buildAwardBoard(results, field) {
@@ -480,7 +483,6 @@ export default function App() {
   const [editingResult, setEditingResult] = useState(null);
   const [editOppLogo, setEditOppLogo] = useState(null);
   const [editGoalCounts, setEditGoalCounts] = useState({});
-  const [oppLogo, setOppLogo] = useState(null);
   const [newResult, setNewResult] = useState(null);
   const [addingComp, setAddingComp] = useState(false);
   const [newCompName, setNewCompName] = useState("");
@@ -497,12 +499,12 @@ export default function App() {
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: "" });
   const [goalCounts, setGoalCounts] = useState({});
+  const [loanFlags, setLoanFlags] = useState({});
   
   const [form, setForm] = useState({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: "", motm: "", season_id: null });
   const [showFixtureForm, setShowFixtureForm] = useState(false);
   const [editingFixture, setEditingFixture] = useState(null);
   const [fixtureForm, setFixtureForm] = useState({ date: "", opposition: "", competition: "", venue: "", notes: "", season_id: null });
-  const fileRef = useRef();
   const editFileRef = useRef();
   const reportRef = useRef();
   const teamLogoRef = useRef();
@@ -598,13 +600,15 @@ export default function App() {
       .filter(([, count]) => count > 0)
       .map(([pid, count]) => {
         const p = players.find(pl => pl.id === parseInt(pid));
-        return p ? (count > 1 ? `${p.name} ×${count}` : p.name) : null;
+        if (!p) return null;
+        const base = count > 1 ? `${p.name} ×${count}` : p.name;
+        return loanFlags[pid] ? `${base} [loan]` : base;
       }).filter(Boolean);
     // MOTM from form
     const motmName = form.motm.trim();
         let displayDate = form.date;
     try { displayDate = new Date(form.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch(e) {}
-    const newMatch = { date: displayDate, opposition: form.opposition, homeScore: hs, awayScore: as_, scorers: scorerList, result, competition: form.competition, motm: motmName, oppLogo: oppLogo || null, season_id: form.season_id || activeSeason?.id };
+    const newMatch = { date: displayDate, opposition: form.opposition, homeScore: hs, awayScore: as_, scorers: scorerList, result, competition: form.competition, motm: motmName, season_id: form.season_id || activeSeason?.id };
     try {
       const saved = await insertResult(newMatch);
       const match = saved || { ...newMatch, id: Date.now() };
@@ -618,6 +622,7 @@ export default function App() {
       showToast("✅ Result saved!");
     }
     setGoalCounts({});
+    setLoanFlags({});
   };
 
   const handleSaveEdit = async () => {
@@ -1671,13 +1676,22 @@ export default function App() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {players.filter(p => p.is_active !== false).map(p => {
                           const count = goalCounts[p.id] || 0;
+                          const isLoan = !!loanFlags[p.id];
+                          const rowBg = isLoan && count > 0 ? "#fff8ec" : count > 0 ? "#f0f4ff" : "#f7f8fa";
+                          const rowBorder = isLoan && count > 0 ? "1.5px solid #e8a93b" : count > 0 ? "1.5px solid #FFD700" : "1.5px solid #e8e8e8";
                           return (
-                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, background: count > 0 ? "#f0f4ff" : "#f7f8fa", borderRadius: 10, padding: "10px 14px", border: count > 0 ? "1.5px solid #FFD700" : "1.5px solid #e8e8e8" }}>
+                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, background: rowBg, borderRadius: 10, padding: "10px 14px", border: rowBorder }}>
                               <div style={{ width: 32, height: 32, borderRadius: "50%", background: p.photo ? "transparent" : "#005c1f", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                                 {p.photo ? <img src={p.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span style={{ color: "#FFD700", fontSize: 10, fontWeight: 900 }}>{p.name.slice(0,2).toUpperCase()}</span>}
                               </div>
                               <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#005c1f" }}>{p.name}</span>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                {count > 0 && (
+                                  <button onClick={() => setLoanFlags(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                                    style={{ fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 20, border: isLoan ? "1.5px solid #e8a93b" : "1.5px solid #c7cbd6", background: isLoan ? "#fff3dc" : "#fff", color: isLoan ? "#e8a93b" : "#9ca3af", cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+                                    LOAN
+                                  </button>
+                                )}
                                 <button onClick={() => setGoalCounts(prev => ({ ...prev, [p.id]: Math.max(0, (prev[p.id] || 0) - 1) }))}
                                   style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e0e0e0", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontFamily: "inherit" }}>−</button>
                                 <span style={{ fontSize: 20, fontWeight: 900, color: "#005c1f", minWidth: 20, textAlign: "center" }}>{count}</span>
@@ -1716,17 +1730,7 @@ export default function App() {
                   </>
                 )}
 
-                <div style={{ marginBottom: 20 }}>
-                  <label style={labelStyle}>Opposition Logo (optional)</label>
-                  <input ref={fileRef} type="file" accept="image/*" onChange={e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => setOppLogo(ev.target.result); reader.readAsDataURL(file); }} style={{ display: "none" }} />
-                  <button onClick={() => fileRef.current.click()}
-                    style={{ border: `2px dashed #FFD700`, borderRadius: 10, background: oppLogo ? "#fffde7" : "#fff", padding: "14px 20px", width: "100%", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 700, color: "#005c1f", display: "flex", alignItems: "center", gap: 10, justifyContent: "center", boxSizing: "border-box" }}>
-                    {oppLogo ? <img src={oppLogo} style={{ width: 36, height: 36, objectFit: "contain" }} alt="" /> : "📁"}
-                    {oppLogo ? "Logo uploaded ✓" : "Upload opposition logo"}
-                  </button>
-                </div>
-
-                <button onClick={handleCreate} disabled={!form.date || !form.opposition || form.homeScore === "" || form.awayScore === ""}
+                                <button onClick={handleCreate} disabled={!form.date || !form.opposition || form.homeScore === "" || form.awayScore === ""}
                   style={{ width: "100%", padding: "16px", background: "#005c1f", color: "#FFD700", border: "none", borderRadius: 12, fontSize: 17, fontWeight: 900, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", fontFamily: "inherit", opacity: (!form.date || !form.opposition || form.homeScore === "" || form.awayScore === "") ? 0.5 : 1 }}>
                   Generate Result Card
                 </button>
@@ -1734,7 +1738,7 @@ export default function App() {
             ) : (
               <div>
                 <ResultCard match={newResult} teamName={viewingSeason?.age_group} compColor={getCompColor(competitions, newResult.competition)} players={players} teams={teams} />
-                <button onClick={() => { setNewResult(null); setOppLogo(null); setForm({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: form.competition, motm: "", season_id: form.season_id }); }}
+                <button onClick={() => { setNewResult(null); setForm({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: form.competition, motm: "", season_id: form.season_id }); }}
                   style={{ marginTop: 16, width: "100%", padding: "14px", background: "#fff", color: "#005c1f", border: "2px solid #e8e8e8", borderRadius: 12, fontSize: 15, fontWeight: 800, letterSpacing: 2, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase" }}>
                   ← Add Another Result
                 </button>
@@ -1990,7 +1994,7 @@ export default function App() {
           { key: "history", label: "Results", icon: "📋" },
           { key: "scorers", label: "Awards", icon: "⭐" },
         ].map(tab => (
-          <button key={tab.key} onClick={() => { setMode(tab.key); setNewResult(null); setOppLogo(null); setH2hTeam(null); }}
+          <button key={tab.key} onClick={() => { setMode(tab.key); setNewResult(null); setH2hTeam(null); }}
             style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: THEME.font, fontSize: 9, letterSpacing: 0.5, textTransform: "uppercase", color: mode === tab.key ? THEME.green : THEME.ink60, fontWeight: mode === tab.key ? 700 : 500, cursor: "pointer", padding: "4px 0" }}>
             <span style={{ fontSize: 18 }}>{tab.icon}</span>
             {tab.label}
