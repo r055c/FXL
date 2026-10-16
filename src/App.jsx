@@ -70,16 +70,13 @@ function getCompColor(comps, comp) { const i = comps.indexOf(comp); return COMP_
 
 // ── Helpers ───────────────────────────────────────────────
 function parseScorer(str) {
-  const raw = str.trim();
-  const loan = raw.endsWith(' [loan]');
-  const s = loan ? raw.slice(0, -7) : raw;
-  const m = s.trim().match(/^(.+?)\s*[×x](\d+)$/);
-  if (m) return { name: m[1].trim(), goals: parseInt(m[2]), loan };
-  return { name: s.trim(), goals: 1, loan };
+  const m = str.trim().match(/^(.+?)\s*[×x](\d+)$/);
+  if (m) return { name: m[1].trim(), goals: parseInt(m[2]) };
+  return { name: str.trim(), goals: 1 };
 }
-function buildGoalBoard(results) {
+function buildGoalBoard(results, exclude) {
   const t = {};
-  results.forEach(r => (r.scorers || []).forEach(s => { const { name, goals, loan } = parseScorer(s); if (!loan) t[name] = (t[name] || 0) + goals; }));
+  results.forEach(r => (r.scorers || []).forEach(s => { const { name, goals } = parseScorer(s); if (!exclude || !exclude.has(name)) t[name] = (t[name] || 0) + goals; }));
   return Object.entries(t).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
 }
 function buildAwardBoard(results, field) {
@@ -469,6 +466,7 @@ export default function App() {
   const [teams, setTeams] = useState([]);
   const [fixtures, setFixtures] = useState([]);
   const [players, setPlayers] = useState([]);
+  const loanNames = new Set(players.filter(p => p.is_loan).map(p => p.name));
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeasonState] = useState(null);
   const [viewingSeason, setViewingSeason] = useState(null);
@@ -500,7 +498,6 @@ export default function App() {
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: "" });
   const [goalCounts, setGoalCounts] = useState({});
-  const [loanFlags, setLoanFlags] = useState({});
   
   const [form, setForm] = useState({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: "", motm: "", season_id: null });
   const [showFixtureForm, setShowFixtureForm] = useState(false);
@@ -560,7 +557,7 @@ export default function App() {
   const seasonResultsSorted = seasonResults.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
   const latestResult = seasonResultsSorted[0] || null;
   const recentResults = seasonResultsSorted.slice(0, 3);
-  const homeTopScorer = buildGoalBoard(seasonResults)[0] || null;
+  const homeTopScorer = buildGoalBoard(seasonResults, loanNames)[0] || null;
   const homeMotmBoard = buildAwardBoard(seasonResults, "motm").slice(0, 3);
   const homeFormGuide = seasonResultsSorted.slice(0, 5).reverse();
   const homeSeasonRecord = {
@@ -601,9 +598,7 @@ export default function App() {
       .filter(([, count]) => count > 0)
       .map(([pid, count]) => {
         const p = players.find(pl => pl.id === parseInt(pid));
-        if (!p) return null;
-        const base = count > 1 ? `${p.name} ×${count}` : p.name;
-        return loanFlags[pid] ? `${base} [loan]` : base;
+        return p ? (count > 1 ? `${p.name} ×${count}` : p.name) : null;
       }).filter(Boolean);
     // MOTM from form
     const motmName = form.motm.trim();
@@ -623,7 +618,6 @@ export default function App() {
       showToast("✅ Result saved!");
     }
     setGoalCounts({});
-    setLoanFlags({});
   };
 
   const handleSaveEdit = async () => {
@@ -683,6 +677,18 @@ export default function App() {
       showToast("⚠️ Couldn't delete player — try again");
     }
     setConfirmDeletePlayerId(null);
+  };
+
+  const handleTogglePlayerLoan = async (player) => {
+    const updated = { ...player, is_loan: !player.is_loan };
+    setPlayers(prev => prev.map(p => p.id === updated.id ? updated : p));
+    try {
+      await updatePlayer(updated);
+      showToast(updated.is_loan ? `${player.name} marked as loan player` : `${player.name} is now a squad player`);
+    } catch (e) {
+      setPlayers(prev => prev.map(p => p.id === player.id ? player : p));
+      showToast("⚠️ Couldn't update player — try again");
+    }
   };
 
   const handleTogglePlayerActive = async (player) => {
@@ -1000,13 +1006,13 @@ export default function App() {
             )}
 
             {/* Season leaders */}
-            {(buildGoalBoard(seasonResults).length > 0 || homeMotmBoard.length > 0) && (
+            {(buildGoalBoard(seasonResults, loanNames).length > 0 || homeMotmBoard.length > 0) && (
               <>
                 <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: THEME.ink60, marginBottom: 10 }}>Season Leaders</div>
                 <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
                   <div style={{ flex: 1, background: THEME.white, borderRadius: 14, padding: "14px 16px", boxShadow: "0 2px 8px rgba(18,23,46,0.06)" }}>
                     <div style={{ fontSize: 10, color: THEME.ink60, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>⚽ Top Scorers</div>
-                    {buildGoalBoard(seasonResults).slice(0, 3).length > 0 ? buildGoalBoard(seasonResults).slice(0, 3).map((p, i) => (
+                    {buildGoalBoard(seasonResults, loanNames).slice(0, 3).length > 0 ? buildGoalBoard(seasonResults, loanNames).slice(0, 3).map((p, i) => (
                       <div key={p.name} onClick={() => openPlayerProfile(p.name)} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: i < 2 ? 8 : 0, cursor: "pointer" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? THEME.amber : THEME.ink60, width: 14, textAlign: "center" }}>{i + 1}</span>
                         <div style={{ width: 28, height: 28, borderRadius: "50%", background: THEME.green, color: THEME.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, flexShrink: 0 }}>{p.name.slice(0,2).toUpperCase()}</div>
@@ -1392,7 +1398,7 @@ export default function App() {
             <div style={{ background: "#005c1f", borderRadius: 14, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
               {[
                 { label: "Total Goals", val: filteredResults.reduce((a, r) => a + (r.homeScore || 0), 0) },
-                { label: "Scorers", val: buildGoalBoard(filteredResults).length },
+                { label: "Scorers", val: buildGoalBoard(filteredResults, loanNames).length },
                 { label: "Win Rate", val: `${filteredResults.filter(r => r.result === "W").length}/${filteredResults.length}` },
               ].map(s => (
                 <div key={s.label} style={{ textAlign: "center" }}>
@@ -1401,7 +1407,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {scorersTab === "goals" && <Leaderboard data={buildGoalBoard(filteredResults)} label="Top Goal Scorers" emptyMsg="No goals recorded yet." filterLabel={viewingSeason?.name || "Season 1"} accentColor="#FFD700" onRowClick={openPlayerProfile} />}
+            {scorersTab === "goals" && <Leaderboard data={buildGoalBoard(filteredResults, loanNames)} label="Top Goal Scorers" emptyMsg="No goals recorded yet." filterLabel={viewingSeason?.name || "Season 1"} accentColor="#FFD700" onRowClick={openPlayerProfile} />}
             {scorersTab === "motm" && <Leaderboard data={buildAwardBoard(filteredResults, "motm")} label="Man of the Match" emptyMsg="No MOTM awards yet." filterLabel={viewingSeason?.name || "Season 1"} accentColor="#ffd700" onRowClick={openPlayerProfile} />}
             
             <p style={{ textAlign: "center", color: "#bbb", fontSize: 12, marginTop: 14, letterSpacing: 1 }}>SAMBA SNACKERS {(viewingSeason?.age_group || "").toUpperCase()}</p>
@@ -1551,6 +1557,8 @@ export default function App() {
                           {motms > 0 && <span style={{ fontSize: 11, color: "#e8a93b" }}>⭐ {motms} MOTM</span>}
                         </div>
                       </div>
+                      <button onClick={() => handleTogglePlayerLoan(p)} title={p.is_loan ? "Loan player — goals don't count on the leaderboard" : "Mark as loan player"}
+                        style={{ fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 20, border: p.is_loan ? "1.5px solid #e8a93b" : "1.5px solid #c7cbd6", background: p.is_loan ? "#fff3dc" : "#fff", color: p.is_loan ? "#b7791f" : "#9ca3af", cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5, whiteSpace: "nowrap" }}>LOAN</button>
                       <button onClick={() => { setEditingPlayer(p); setPlayerForm({ name: p.name }); setShowPlayerModal(true); }}
                         style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#aaa" }}>✏️</button>
                       <button onClick={() => handleTogglePlayerActive(p)} title="Archive player"
@@ -1707,7 +1715,7 @@ export default function App() {
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {players.filter(p => p.is_active !== false).map(p => {
                           const count = goalCounts[p.id] || 0;
-                          const isLoan = !!loanFlags[p.id];
+                          const isLoan = !!p.is_loan;
                           const rowBg = isLoan && count > 0 ? "#fff8ec" : count > 0 ? "#f0f4ff" : "#f7f8fa";
                           const rowBorder = isLoan && count > 0 ? "1.5px solid #e8a93b" : count > 0 ? "1.5px solid #FFD700" : "1.5px solid #e8e8e8";
                           return (
@@ -1715,14 +1723,8 @@ export default function App() {
                               <div style={{ width: 32, height: 32, borderRadius: "50%", background: p.photo ? "transparent" : "#005c1f", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                                 {p.photo ? <img src={p.photo} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <span style={{ color: "#FFD700", fontSize: 10, fontWeight: 900 }}>{p.name.slice(0,2).toUpperCase()}</span>}
                               </div>
-                              <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#005c1f" }}>{p.name}</span>
+                              <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#005c1f" }}>{p.name}{isLoan && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, padding: "2px 6px", borderRadius: 20, background: "#fff3dc", color: "#b7791f", border: "1px solid #e8a93b", letterSpacing: 0.5, verticalAlign: "middle" }}>LOAN</span>}</span>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                {count > 0 && (
-                                  <button onClick={() => setLoanFlags(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                                    style={{ fontSize: 10, fontWeight: 700, padding: "3px 7px", borderRadius: 20, border: isLoan ? "1.5px solid #e8a93b" : "1.5px solid #c7cbd6", background: isLoan ? "#fff3dc" : "#fff", color: isLoan ? "#e8a93b" : "#9ca3af", cursor: "pointer", fontFamily: "inherit", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
-                                    LOAN
-                                  </button>
-                                )}
                                 <button onClick={() => setGoalCounts(prev => ({ ...prev, [p.id]: Math.max(0, (prev[p.id] || 0) - 1) }))}
                                   style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e0e0e0", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontFamily: "inherit" }}>−</button>
                                 <span style={{ fontSize: 20, fontWeight: 900, color: "#005c1f", minWidth: 20, textAlign: "center" }}>{count}</span>
@@ -1785,7 +1787,7 @@ export default function App() {
           const draws = sResults.filter(r => r.result === "D").length;
           const losses = sResults.filter(r => r.result === "L").length;
           const totalGoals = sResults.reduce((a, r) => a + (r.homeScore || 0), 0);
-          const goalBoard = buildGoalBoard(sResults).slice(0, 5);
+          const goalBoard = buildGoalBoard(sResults, loanNames).slice(0, 5);
           const motmBoard = buildAwardBoard(sResults, "motm");
           const playerOfSeason = motmBoard[0];
           const biggestWin = sResults.filter(r => r.result === "W").sort((a, b) => (b.homeScore - b.awayScore) - (a.homeScore - a.awayScore))[0];
