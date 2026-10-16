@@ -496,6 +496,7 @@ export default function App() {
   // Player / squad state
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [showFormerPlayers, setShowFormerPlayers] = useState(false);
+  const [confirmDeletePlayerId, setConfirmDeletePlayerId] = useState(null);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerForm, setPlayerForm] = useState({ name: "" });
   const [goalCounts, setGoalCounts] = useState({});
@@ -673,9 +674,15 @@ export default function App() {
     showToast("✅ Player saved!");
   };
 
-  const handleDeletePlayer = async (id) => {
-    try { await deletePlayer(id); } catch(e) {}
-    setPlayers(prev => prev.filter(p => p.id !== id));
+  const handleDeletePlayer = async (player) => {
+    try {
+      await deletePlayer(player.id);
+      setPlayers(prev => prev.filter(p => p.id !== player.id));
+      showToast(`🗑️ ${player.name} deleted`);
+    } catch (e) {
+      showToast("⚠️ Couldn't delete player — try again");
+    }
+    setConfirmDeletePlayerId(null);
   };
 
   const handleTogglePlayerActive = async (player) => {
@@ -1548,6 +1555,18 @@ export default function App() {
                         style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#aaa" }}>✏️</button>
                       <button onClick={() => handleTogglePlayerActive(p)} title="Archive player"
                         style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>📦</button>
+                      {confirmDeletePlayerId === p.id ? (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#d1495b" }}>Delete?</span>
+                          <button onClick={() => setConfirmDeletePlayerId(null)}
+                            style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#888" }}>No</button>
+                          <button onClick={() => handleDeletePlayer(p)}
+                            style={{ background: "#d1495b", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#fff" }}>Yes</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeletePlayerId(p.id)} title="Delete player"
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>🗑️</button>
+                      )}
                     </div>
                   );
                 })}
@@ -1578,6 +1597,18 @@ export default function App() {
                           </div>
                           <button onClick={() => handleTogglePlayerActive(p)} title="Re-activate"
                             style={{ background: "none", border: "1px solid #e0e0e0", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#888" }}>↩ Restore</button>
+                          {confirmDeletePlayerId === p.id ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#d1495b" }}>Delete?</span>
+                              <button onClick={() => setConfirmDeletePlayerId(null)}
+                                style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#888" }}>No</button>
+                              <button onClick={() => handleDeletePlayer(p)}
+                                style={{ background: "#d1495b", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, color: "#fff" }}>Yes</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setConfirmDeletePlayerId(p.id)} title="Delete player"
+                              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16 }}>🗑️</button>
+                          )}
                         </div>
                       );
                     })}
