@@ -172,9 +172,11 @@ async function resizeImage(file, max = 400) {
   }
 }
 
-export async function uploadImage(file, path, bucket = "logos") {
-  const blob = await resizeImage(file);
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+export async function uploadImage(file, bucket = "logos") {
+  // Same shape as the Leon FC app: unique filename, public URL back. Shrunk first so phone photos stay small.
+  const body = await resizeImage(file);
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`, {
     method: "POST",
     headers: {
       "apikey": SUPABASE_ANON_KEY,
@@ -182,8 +184,11 @@ export async function uploadImage(file, path, bucket = "logos") {
       "Content-Type": "image/png",
       "x-upsert": "true",
     },
-    body: blob,
+    body,
   });
-  if (!res.ok) throw new Error("Failed to upload image");
-  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Upload failed: ${err}`);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}`;
 }
