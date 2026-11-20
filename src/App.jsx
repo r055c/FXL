@@ -443,6 +443,106 @@ function TeamPicker({ teams, value, onChange, onAddNew }) {
 }
 
 // ── Main App ──────────────────────────────────────────────
+// ── Matchday graphic (1080×1350, for WhatsApp / socials) ─────────────
+function loadImg(src) {
+  return new Promise(resolve => {
+    if (!src) return resolve(null);
+    const img = new Image();
+    if (!src.startsWith("data:")) img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function drawMatchdayGraphic(fx, oppLogoSrc) {
+  const W = 1080, H = 1350;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  const F = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const GOLD = "#FFD700", GREEN = "#005c1f", BLUE = "#0b3a8c";
+
+  // Background: deep green with Brazil-style diagonal bands
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#00702a"); bg.addColorStop(1, "#002f10");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.globalAlpha = 0.07; ctx.fillStyle = GOLD;
+  for (let x = -H; x < W; x += 140) {
+    ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + 60, H); ctx.lineTo(x + 60 + H, 0); ctx.lineTo(x + H, 0); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  // Gold and blue edge stripes
+  ctx.fillStyle = GOLD; ctx.fillRect(0, 0, W, 14); ctx.fillRect(0, H - 14, W, 14);
+  ctx.fillStyle = BLUE; ctx.fillRect(0, 14, W, 8); ctx.fillRect(0, H - 22, W, 8);
+
+  const text = (str, x, y, size, color, weight = 900, align = "center", spacing = 0) => {
+    ctx.font = `${weight} ${size}px ${F}`;
+    ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = `${spacing}px`;
+    ctx.fillText(str, x, y);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  };
+  const fitText = (str, x, y, maxSize, maxW, color, weight = 900, spacing = 0) => {
+    let size = maxSize;
+    ctx.font = `${weight} ${size}px ${F}`;
+    while (ctx.measureText(str).width + spacing * str.length > maxW && size > 18) { size -= 2; ctx.font = `${weight} ${size}px ${F}`; }
+    text(str, x, y, size, color, weight, "center", spacing);
+  };
+
+  // Header
+  text("SAMBA SNACKERS FC", W / 2, 120, 34, "rgba(255,255,255,0.75)", 800, "center", 8);
+  text("MATCHDAY", W / 2, 240, 132, GOLD, 900, "center", 4);
+  if (fx.competition) text(fx.competition.toUpperCase(), W / 2, 300, 32, "#fff", 700, "center", 6);
+
+  // Badges
+  const [home, away] = await Promise.all([loadImg("/icon-512.png"), loadImg(oppLogoSrc)]);
+  const R = 170, cy = 560, lx = 270, rx = W - 270;
+  const disc = (cx, img, initials, cover = false) => {
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 10; ctx.strokeStyle = GOLD; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+    if (img) {
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R - 12, 0, Math.PI * 2); ctx.clip();
+      const s = cover ? (R - 12) * 2 : (R - 22) * 2, ratio = (cover ? Math.max : Math.min)(s / img.width, s / img.height);
+      const w = img.width * ratio, h = img.height * ratio;
+      ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+      ctx.restore();
+    } else {
+      text(initials, cx, cy + 40, 110, GREEN, 900);
+    }
+  };
+  const initialsOf = n => (n || "?").replace(/\(.*?\)/g, "").trim().split(/\s+/).map(w => w[0]).join("").slice(0, 3).toUpperCase();
+  disc(lx, home, "SS", true);
+  disc(rx, away, initialsOf(fx.opposition));
+  text("VS", W / 2, cy + 36, 96, GOLD, 900);
+
+  // Team names
+  fitText("SAMBA SNACKERS", lx, cy + R + 70, 40, 400, "#fff", 900, 1);
+  const opp = (fx.opposition || "").toUpperCase();
+  const m = opp.match(/^(.*?)\s*\((.*?)\)\s*$/);
+  fitText(m ? m[1] : opp, rx, cy + R + 70, 40, 400, "#fff", 900, 1);
+  if (m) text(`(${m[2]})`, rx, cy + R + 112, 28, "rgba(255,255,255,0.7)", 700);
+
+  // Info panel
+  const py = 940, ph = 300, px = 80, pw = W - 160;
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(px, py, pw, ph, 28) : ctx.rect(px, py, pw, ph); ctx.fill();
+  ctx.fillStyle = GOLD; ctx.fillRect(px, py, 10, ph);
+
+  const d = new Date((fx.rawDate || fx.date) + (fx.rawDate ? "T12:00:00" : ""));
+  const dateStr = isNaN(d) ? (fx.date || "") : d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
+  fitText(dateStr, W / 2, py + 95, 64, pw - 80, "#fff", 900, 2);
+  const line2 = [fx.kickoff && `KICK-OFF ${fx.kickoff}`].filter(Boolean).join("");
+  if (line2) text(line2, W / 2, py + 170, 52, GOLD, 900, "center", 3);
+  if (fx.venue) fitText(`📍 ${fx.venue.toUpperCase()}`, W / 2, py + (line2 ? 245 : 190), 38, pw - 80, "rgba(255,255,255,0.85)", 700, 2);
+
+  return await new Promise(resolve => cv.toBlob(resolve, "image/png"));
+}
+
 export default function App() {
   const [mode, setMode] = useState("home");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -501,8 +601,9 @@ export default function App() {
   
   const [form, setForm] = useState({ date: "", opposition: "", homeScore: "", awayScore: "", scorers: "", competition: "", motm: "", season_id: null });
   const [showFixtureForm, setShowFixtureForm] = useState(false);
+  const [graphic, setGraphic] = useState(null); // { fx, url, blob }
   const [editingFixture, setEditingFixture] = useState(null);
-  const [fixtureForm, setFixtureForm] = useState({ date: "", opposition: "", competition: "", venue: "", notes: "", season_id: null });
+  const [fixtureForm, setFixtureForm] = useState({ date: "", opposition: "", competition: "", venue: "", notes: "", kickoff: "", season_id: null });
   const editFileRef = useRef();
   const reportRef = useRef();
   const teamLogoRef = useRef();
@@ -723,6 +824,30 @@ export default function App() {
     setResults(prev => prev.map(r => r.opposition === team.name ? { ...r, opposition: trimmed } : r));
   };
 
+  const openMatchdayGraphic = async (fx) => {
+    showToast("🎨 Creating graphic…");
+    try {
+      const oppLogo = teams.find(t => t.name === fx.opposition)?.logo || null;
+      const blob = await drawMatchdayGraphic(fx, oppLogo);
+      if (graphic?.url) URL.revokeObjectURL(graphic.url);
+      setGraphic({ fx, blob, url: URL.createObjectURL(blob) });
+      setToast(null);
+    } catch (e) {
+      showToast("⚠️ Couldn't create graphic");
+    }
+  };
+  const closeGraphic = () => { if (graphic?.url) URL.revokeObjectURL(graphic.url); setGraphic(null); };
+  const shareGraphic = async () => {
+    if (!graphic) return;
+    const name = `matchday-${(graphic.fx.rawDate || "next")}.png`;
+    const file = new File([graphic.blob], name, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: "Matchday" }); return; } catch (e) { if (e.name === "AbortError") return; }
+    }
+    const a = document.createElement("a");
+    a.href = graphic.url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  };
+
   const handleSaveFixture = async () => {
     let displayDate = fixtureForm.date;
     try { displayDate = new Date(fixtureForm.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch(e) {}
@@ -736,7 +861,7 @@ export default function App() {
       catch(e) { setFixtures(prev => [...prev, { ...fix, id: Date.now() }]); }
     }
     setShowFixtureForm(false); setEditingFixture(null);
-    setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", season_id: null });
+    setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", kickoff: "", season_id: null });
     showToast("✅ Fixture saved!");
   };
 
@@ -928,9 +1053,13 @@ export default function App() {
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontFamily: THEME.font, fontWeight: 600, fontSize: 15, color: THEME.green, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>vs {nextFixture.opposition}</div>
-                      <div style={{ fontSize: 12, color: THEME.ink60, marginTop: 2 }}>{nextFixture.venue ? "📍 " + nextFixture.venue : nextFixture.competition || " "}</div>
+                      <div style={{ fontSize: 12, color: THEME.ink60, marginTop: 2 }}>{[nextFixture.kickoff && "⏱ " + nextFixture.kickoff, nextFixture.venue ? "📍 " + nextFixture.venue : nextFixture.competition].filter(Boolean).join("  ·  ") || " "}</div>
                     </div>
                     <span style={{ color: THEME.ink30, fontSize: 18, marginLeft: 8 }}>›</span>
+                  </button>
+                  <button onClick={() => openMatchdayGraphic(nextFixture)}
+                    style={{ marginTop: 12, width: "100%", padding: "10px", background: THEME.green, color: THEME.gold, border: "none", borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: THEME.font, letterSpacing: 0.5 }}>
+                    📸 Matchday graphic
                   </button>
                 </div>
               </>
@@ -1057,7 +1186,7 @@ export default function App() {
             </button>
 
             {isAdmin && (
-              <button onClick={() => { setEditingFixture(null); setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", season_id: activeSeason?.id }); setShowFixtureForm(true); }}
+              <button onClick={() => { setEditingFixture(null); setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", kickoff: "", season_id: activeSeason?.id }); setShowFixtureForm(true); }}
                 style={{ width: "100%", padding: "12px", background: THEME.green, color: THEME.gold, border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", fontFamily: THEME.font, marginBottom: 20 }}>
                 + Add Fixture
               </button>
@@ -1068,6 +1197,8 @@ export default function App() {
                 <div style={{ fontFamily: THEME.font, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: THEME.ink60, marginBottom: 12 }}>{editingFixture ? "Edit Fixture" : "New Fixture"}</div>
                 <label style={labelStyle}>Date</label>
                 <input type="date" value={fixtureForm.date} onChange={e => setFixtureForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, marginBottom: 12 }} />
+                <label style={labelStyle}>Kick-off</label>
+                <input type="time" value={fixtureForm.kickoff || ""} onChange={e => setFixtureForm(f => ({ ...f, kickoff: e.target.value }))} style={{ ...inputStyle, marginBottom: 12 }} />
                 <label style={labelStyle}>Opposition</label>
                 <div style={{ marginBottom: 12 }}>
                   <TeamPicker teams={teams} value={fixtureForm.opposition} onChange={v => setFixtureForm(f => ({ ...f, opposition: v }))} onAddNew={name => { handleAddTeam(name); setFixtureForm(f => ({ ...f, opposition: name })); }} />
@@ -1122,7 +1253,7 @@ export default function App() {
                 <div style={{ fontSize: 12, color: THEME.ink60 }}>No upcoming fixtures logged yet.</div>
               </div>
             ) : upcomingFixtures.map((fx, i) => (
-              <div key={fx.id} onClick={() => { if (!isAdmin) return; setEditingFixture(fx); setFixtureForm({ date: fx.rawDate || "", opposition: fx.opposition, competition: fx.competition || competitions[0] || "", venue: fx.venue || "", notes: fx.notes || "", season_id: fx.season_id }); setShowFixtureForm(true); }}
+              <div key={fx.id} onClick={() => { if (!isAdmin) return; setEditingFixture(fx); setFixtureForm({ date: fx.rawDate || "", opposition: fx.opposition, competition: fx.competition || competitions[0] || "", venue: fx.venue || "", notes: fx.notes || "", kickoff: fx.kickoff || "", season_id: fx.season_id }); setShowFixtureForm(true); }}
                 style={{ display: "flex", alignItems: "center", gap: 12, background: i === 0 ? THEME.pitchSoft : THEME.white, borderRadius: 16, padding: "14px 16px", marginBottom: 10, boxShadow: "0 2px 8px rgba(18,23,46,0.06)", borderLeft: `4px solid ${i === 0 ? THEME.pitch : THEME.amber}`, cursor: isAdmin ? "pointer" : "default" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: i === 0 ? THEME.pitch : "#f4f6f9", color: i === 0 ? "#fff" : THEME.green, borderRadius: 10, padding: "6px 10px", fontFamily: THEME.font, flexShrink: 0, width: 44 }}>
                   <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{new Date(fx.rawDate || fx.date).getDate()}</span>
@@ -1131,6 +1262,7 @@ export default function App() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: THEME.font, fontWeight: 600, fontSize: 14, color: THEME.green, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>vs {fx.opposition}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 3 }}>
+                    {fx.kickoff && <span style={{ fontFamily: THEME.font, fontSize: 9, color: THEME.ink60 }}>⏱ {fx.kickoff}</span>}
                     {fx.venue && <span style={{ fontFamily: THEME.font, fontSize: 9, color: THEME.ink60 }}>📍 {fx.venue}</span>}
                     {fx.notes && <span style={{ fontFamily: THEME.font, fontSize: 9, color: THEME.ink60 }}>{fx.notes}</span>}
                   </div>
@@ -1138,6 +1270,8 @@ export default function App() {
                 <span style={{ fontFamily: THEME.font, fontSize: 8, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", padding: "3px 8px", borderRadius: 20, background: i === 0 ? THEME.pitch : "#eef0f4", color: i === 0 ? "#fff" : THEME.ink60, flexShrink: 0 }}>
                   {i === 0 ? "Next Up" : (fx.competition || "Fixture")}
                 </span>
+                <button onClick={e => { e.stopPropagation(); openMatchdayGraphic(fx); }} title="Matchday graphic"
+                  style={{ background: i === 0 ? THEME.green : "#f4f6f9", color: i === 0 ? THEME.gold : THEME.green, border: "none", borderRadius: 10, padding: "6px 9px", fontSize: 15, cursor: "pointer", flexShrink: 0 }}>📸</button>
               </div>
             ))}
 
@@ -1147,7 +1281,7 @@ export default function App() {
                 {pastFixtures.map(fx => {
                   const matchedResult = findFixtureResult(fx);
                   return (
-                    <div key={fx.id} onClick={() => { if (!isAdmin || matchedResult) return; setEditingFixture(fx); setFixtureForm({ date: fx.rawDate || "", opposition: fx.opposition, competition: fx.competition || competitions[0] || "", venue: fx.venue || "", notes: fx.notes || "", season_id: fx.season_id }); setShowFixtureForm(true); }}
+                    <div key={fx.id} onClick={() => { if (!isAdmin || matchedResult) return; setEditingFixture(fx); setFixtureForm({ date: fx.rawDate || "", opposition: fx.opposition, competition: fx.competition || competitions[0] || "", venue: fx.venue || "", notes: fx.notes || "", kickoff: fx.kickoff || "", season_id: fx.season_id }); setShowFixtureForm(true); }}
                       style={{ display: "flex", alignItems: "center", gap: 12, background: THEME.white, borderRadius: 16, padding: "12px 16px", marginBottom: 8, opacity: 0.6, cursor: (isAdmin && !matchedResult) ? "pointer" : "default" }}>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#f4f6f9", borderRadius: 10, padding: "5px 9px", fontFamily: THEME.font, flexShrink: 0, width: 40 }}>
                         <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1, color: THEME.green }}>{new Date(fx.rawDate || fx.date).getDate()}</span>
@@ -1190,7 +1324,7 @@ export default function App() {
               { key: "seasons", icon: "🗓", accent: THEME.loss, title: "Season History", desc: "Past seasons, archive & switch" },
             ].map(item => (
               <button key={item.key} disabled={item.disabled} onClick={() => {
-                  if (item.key === "fixtures") { setEditingFixture(null); setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", season_id: activeSeason?.id }); setShowFixtureForm(true); }
+                  if (item.key === "fixtures") { setEditingFixture(null); setFixtureForm({ date: "", opposition: "", competition: competitions[0] || "", venue: "", notes: "", kickoff: "", season_id: activeSeason?.id }); setShowFixtureForm(true); }
                   setMode(item.key);
                 }}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: THEME.white, border: "none", borderLeft: `3px solid ${item.accent}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, boxShadow: "0 2px 8px rgba(18,23,46,0.05)", cursor: item.disabled ? "default" : "pointer", opacity: item.disabled ? 0.5 : 1, fontFamily: THEME.font, textAlign: "left" }}>
@@ -1333,7 +1467,7 @@ export default function App() {
                     <label style={labelStyle}>Goal Scorers</label>
                     {players.length > 0 ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {players.map(p => {
+                        {players.filter(p => p.is_active !== false || (editGoalCounts[p.id] || 0) > 0).map(p => {
                           const count = editGoalCounts[p.id] || 0;
                           return (
                             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: count > 0 ? "#f0f4ff" : "#f7f8fa", borderRadius: 10, padding: "8px 12px", border: count > 0 ? "1.5px solid #FFD700" : "1.5px solid #e8e8e8" }}>
@@ -1368,7 +1502,7 @@ export default function App() {
                     <input type="text" value={editingResult.motm || ""} onChange={e => setEditingResult(r => ({ ...r, motm: e.target.value }))} style={inputStyle} placeholder="Type or select below" />
                     {players.length > 0 && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                        {players.map(p => (
+                        {players.filter(p => p.is_active !== false || editingResult.motm === p.name).map(p => (
                           <button key={p.id} onClick={() => setEditingResult(r => ({ ...r, motm: r.motm === p.name ? "" : p.name }))}
                             style={{ padding: "4px 10px", borderRadius: 16, border: editingResult.motm === p.name ? "none" : "1.5px solid #e0e0e0", background: editingResult.motm === p.name ? "#ffd700" : "#fff", color: editingResult.motm === p.name ? "#005c1f" : "#888", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             {p.name}
@@ -1465,20 +1599,23 @@ export default function App() {
             {!h2hTeam && (
               <>
                 {/* Hidden file input for team logo upload */}
-                <input ref={teamLogoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                <input ref={teamLogoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
                   const file = e.target.files[0];
+                  e.target.value = "";
                   if (!file || !uploadingLogoForTeam) return;
-                  const reader = new FileReader();
-                  reader.onload = async ev => {
-                    const logo = ev.target.result;
-                    const team = teams.find(t => t.id === uploadingLogoForTeam);
-                    if (!team) return;
+                  const team = teams.find(t => t.id === uploadingLogoForTeam);
+                  if (!team) return;
+                  showToast("⏳ Uploading logo…");
+                  try {
+                    const logo = await uploadImage(file, `team-${team.id}-${Date.now()}.png`);
                     const updated = { ...team, logo };
-                    try { await updateTeam(updated); } catch(e) {}
+                    await updateTeam(updated);
                     setTeams(prev => prev.map(t => t.id === updated.id ? updated : t));
-                    setUploadingLogoForTeam(null);
-                  };
-                  reader.readAsDataURL(file);
+                    showToast("✅ Logo saved");
+                  } catch (err) {
+                    showToast("⚠️ Logo upload failed — try again");
+                  }
+                  setUploadingLogoForTeam(null);
                 }} />
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
@@ -2021,9 +2158,22 @@ export default function App() {
       )}
 
       {/* ── BOTTOM TAB BAR ── */}
+      {graphic && (
+        <div onClick={closeGraphic} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 12 }}>
+            <img src={graphic.url} alt="Matchday graphic" style={{ width: "100%", borderRadius: 12, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={closeGraphic} style={{ flex: 1, padding: "13px", background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: THEME.font }}>Close</button>
+              <button onClick={shareGraphic} style={{ flex: 2, padding: "13px", background: THEME.gold, color: THEME.green, border: "none", borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: THEME.font }}>Share / Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(10px)", borderTop: "1px solid #e6e8ee", display: "flex", padding: "8px 6px calc(8px + env(safe-area-inset-bottom))", zIndex: 60 }}>
         {[
           { key: "home", label: "Home", icon: "🏠" },
+          { key: "fixtures", label: "Fixtures", icon: "📅" },
           { key: "history", label: "Results", icon: "📋" },
           { key: "scorers", label: "Awards", icon: "⭐" },
         ].map(tab => (

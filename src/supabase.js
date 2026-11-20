@@ -149,3 +149,41 @@ export async function deleteAppearancesByResult(resultId) {
   const res = await fetch(`${base()}/appearances?result_id=eq.${resultId}`, { method: "DELETE", headers });
   if (!res.ok) throw new Error("Failed to delete appearances");
 }
+
+// ── Storage: images (team logos) ─────────────────────────
+// Phone photos can be several MB, so shrink to max 400px before upload.
+async function resizeImage(file, max = 400) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function uploadImage(file, path, bucket = "logos") {
+  const blob = await resizeImage(file);
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "image/png",
+      "x-upsert": "true",
+    },
+    body: blob,
+  });
+  if (!res.ok) throw new Error("Failed to upload image");
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+}
