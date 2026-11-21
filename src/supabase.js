@@ -152,7 +152,43 @@ export async function deleteAppearancesByResult(resultId) {
 
 // ── Storage: images (team logos) ─────────────────────────
 // Phone photos can be several MB, so shrink to max 400px before upload.
-async function resizeImage(file, max = 400) {
+// Clears a plain background touching the edges (white, or one solid colour in all four corners),
+// keeping anything inside the badge, then trims the empty margins. Returns the original if it looks wrong.
+function removeBackground(canvas) {
+  try {
+    const w = canvas.width, h = canvas.height, ctx = canvas.getContext("2d");
+    const im = ctx.getImageData(0, 0, w, h), px = im.data;
+    const at = (x, y) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2], px[i + 3]]; };
+    const cs = [at(1, 1), at(w - 2, 1), at(1, h - 2), at(w - 2, h - 2)], k = cs[0];
+    const near = (p, q, t) => Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) + Math.abs(p[2] - q[2]) < t;
+    const solid = cs.every(p => p[3] > 200 && near(p, k, 30)) ? k : null;
+    const bg = n => { const i = n * 4, p = [px[i], px[i + 1], px[i + 2]];
+      return px[i + 3] < 20 || (p[0] > 228 && p[1] > 228 && p[2] > 228) || (solid && near(p, solid, 60)); };
+    const seen = new Uint8Array(w * h), st = [];
+    const push = (x, y) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const n = y * w + x; if (seen[n] || !bg(n)) return; seen[n] = 1; st.push(n); };
+    for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+    for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+    let cleared = 0;
+    while (st.length) { const n = st.pop(), x = n % w, y = (n - x) / w; px[n * 4 + 3] = 0; cleared++; push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1); }
+    if (cleared < w * h * 0.01 || cleared > w * h * 0.9) return canvas;
+    // Soften the cut edge by one pixel so it doesn't look jagged.
+    for (let n = 0; n < w * h; n++) {
+      if (seen[n]) continue;
+      const x = n % w, y = (n - x) / w;
+      if ((x > 0 && seen[n - 1]) || (x < w - 1 && seen[n + 1]) || (y > 0 && seen[n - w]) || (y < h - 1 && seen[n + w])) px[n * 4 + 3] = Math.min(px[n * 4 + 3], 140);
+    }
+    ctx.putImageData(im, 0, 0);
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 <= x0 || y1 <= y0) return canvas;
+    const out = document.createElement("canvas");
+    out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+    out.getContext("2d").drawImage(canvas, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  } catch (e) { return canvas; }
+}
+
+async function resizeImage(file, max = 400, cutout = false) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -166,15 +202,16 @@ async function resizeImage(file, max = 400) {
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    const out = cutout ? removeBackground(canvas) : canvas;
+    return await new Promise(resolve => out.toBlob(resolve, "image/png"));
   } finally {
     URL.revokeObjectURL(url);
   }
 }
 
-export async function uploadImage(file, bucket = "logos") {
+export async function uploadImage(file, bucket = "logos", { cutout = bucket === "logos" } = {}) {
   // Same shape as the Leon FC app: unique filename, public URL back. Shrunk first so phone photos stay small.
-  const body = await resizeImage(file);
+  const body = await resizeImage(file, 512, cutout);
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`, {
     method: "POST",

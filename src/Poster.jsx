@@ -51,6 +51,22 @@ export function findTeamLogo(teams, name) {
 const initials = (name) => words(name).slice(0, 2).map((x) => x[0]).join("").toUpperCase() || "?";
 const upper = (s) => String(s || "").toUpperCase();
 // Split "Hebburn Town (Juniors) U10 Gold" into the club name and its age/team ("U10 GOLD").
+// Kit colour from the bracketed part of a team name, e.g. "Man Chippy (Blues)" -> blue.
+const KIT = {
+  red: "#d42a2a", reds: "#d42a2a", blue: "#2a5fd1", blues: "#2a5fd1", "sky blue": "#6cb4ee", "sky blues": "#6cb4ee", navy: "#1c2e6b",
+  black: "#1c1c1c", blacks: "#1c1c1c", white: "#f4f4f4", whites: "#f4f4f4", green: "#25913f", greens: "#25913f",
+  yellow: "#f5c400", yellows: "#f5c400", gold: "#e0ad12", orange: "#ef7b1a", oranges: "#ef7b1a", purple: "#7140b5", purples: "#7140b5",
+  claret: "#7a1f3d", maroon: "#7a1f3d", pink: "#e75a9c", grey: "#8a929c", gray: "#8a929c", silver: "#b8bec6",
+};
+export function kitColour(name) {
+  const m = /\(([^)]*)\)/.exec(String(name || ""));
+  if (!m) return null;
+  const k = m[1].trim().toLowerCase();
+  if (KIT[k]) return KIT[k];
+  if (/^#[0-9a-f]{6}$/i.test(k)) return k;
+  const w = k.split(/[\s/&,-]+/).find((x) => KIT[x]);
+  return w ? KIT[w] : null;
+}
 export function oppParts(name) {
   const s = String(name || "").replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
   const m = /\b(u\d{1,2})\b(?:\s+([a-z]+))?\s*$/i.exec(s);
@@ -136,11 +152,12 @@ function Ghost({ src, side, opacity }) {
   return <img src={u} alt="" style={{ position: "absolute", [side]: -330, top: 330, width: 660, height: 660, objectFit: "contain", opacity }} />;
 }
 function Badge({ src, name, size, c, ring }) {
-  const [bg, setBg] = useState(null);
-  useEffect(() => { let on = true; setBg(null); cornerColour(src).then((v) => { if (on) setBg(v); }); return () => { on = false; }; }, [src]);
+  const cut = useCutout(src);
+  const kit = kitColour(name);
+  const edge = kit ? (contrast(kit, "#ffffff") < 1.3 ? "#c9d0d9" : kit) : null;
   return (
-    <div style={{ width: size, height: size, borderRadius: size / 2, background: bg || "#ffffff", border: ring ? `3px solid ${c.accent}` : "none", boxSizing: "border-box", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      {src ? <img src={src} alt="" style={{ width: "72%", height: "72%", objectFit: "contain" }} />
+    <div style={{ width: size, height: size, borderRadius: size / 2, background: "#ffffff", border: kit ? `${Math.max(4, Math.round(size * 0.045))}px solid ${edge}` : ring ? `3px solid ${c.accent}` : "none", boxSizing: "border-box", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      {src ? <img src={cut} alt="" style={{ width: "84%", height: "84%", objectFit: "contain" }} />
         : <div style={{ fontFamily: COND, fontWeight: 800, fontSize: size * 0.4, color: "#0b1320" }}>{initials(name)}</div>}
     </div>
   );
@@ -353,15 +370,19 @@ function SinglePoster({ d }) {
   const c = d.colors, f = d.fixtures[0];
   if (!f) return <div style={{ width: POSTER_W, height: POSTER_H, background: c.bg }} />;
   const [L, R] = sides(f, d);
-  const side = (s) => (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: 400 }}>
-      {s.ours ? <Crest d={d} size={300} /> : <Badge src={s.logo} name={f.opp} size={300} c={c} />}
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontFamily: COND, fontWeight: 800, fontSize: nameSize(s.name, 66), lineHeight: 1 }}>{s.name}</div>
-        {s.sub ? <div style={{ fontFamily: COND, fontWeight: 600, fontSize: 30, letterSpacing: 5, color: c.accent, marginTop: 6 }}>{s.sub}</div> : null}
+  const kitOf = (s) => (s.ours ? c.accent : kitColour(f.opp) || c.accent);
+  const side = (s) => {
+    const k = kitOf(s), ink = contrast(k, "#ffffff") >= 3 ? "#ffffff" : "#0b1320";
+    return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, width: 400, padding: "30px 0 28px", borderRadius: 30, background: `linear-gradient(170deg, ${mix(k, "#ffffff", 0.14)}, ${mix(k, "#000000", 0.22)})`, boxShadow: "0 10px 30px rgba(0,0,0,0.3)", color: ink }}>
+      {s.ours ? <Crest d={d} size={280} /> : <Badge src={s.logo} name={f.opp} size={280} c={c} />}
+      <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px" }}>
+        <div style={{ fontFamily: COND, fontWeight: 800, fontSize: nameSize(s.name, 62), lineHeight: 1 }}>{s.name}</div>
+        {s.sub ? <div style={{ fontFamily: COND, fontWeight: 600, fontSize: 30, letterSpacing: 5, marginTop: 6, opacity: 0.85 }}>{s.sub}</div> : null}
       </div>
     </div>
-  );
+    );
+  };
   return (
     <div style={{ width: POSTER_W, height: POSTER_H, boxSizing: "border-box", background: c.bg, color: "#fff", fontFamily: BODY, padding: "64px 64px 48px", display: "flex", flexDirection: "column", gap: 28 }}>
       <Head d={d} comp={f.compLabel} />
@@ -468,7 +489,7 @@ function PillPoster({ d }) {
   if (!f) return <div style={{ width: POSTER_W, height: POSTER_H, background: c.bg }} />;
   const [L, R] = sides(f, d);
   const us = L.ours ? L : R, them = L.ours ? R : L;
-  const oc = oppCol || c.accent;
+  const oc = kitColour(f.opp) || oppCol || c.accent;
   const onOpp = contrast(oc, "#ffffff") >= 3 ? "#ffffff" : "#0b1320";
   const away = f.ha === "A";
   const panel = (left) => ({ position: "absolute", top: 0, [left ? "left" : "right"]: 0, width: 560, height: POSTER_H });
